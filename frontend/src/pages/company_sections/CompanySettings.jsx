@@ -208,7 +208,16 @@ const CompanySettings = () => {
 
 
 
-        const handleSave = async (fullPayload = false) => {
+        const ensureUrlProtocol = (url) => {
+        if (!url || url.trim() === '') return null;
+        const trimmedUrl = url.trim();
+        if (!/^https?:\/\//i.test(trimmedUrl)) {
+            return `https://${trimmedUrl}`;
+        }
+        return trimmedUrl;
+    };
+
+    const handleSave = async (fullPayload = false) => {
         try {
             setIsLoading(true);
 
@@ -227,10 +236,10 @@ const CompanySettings = () => {
                     official_email: formData.officialEmail,
                     support_email: formData.supportEmail,
                     phone_number: formData.phoneNumber,
-                    website: formData.website,
-                    linkedin_url: formData.linkedinUrl,
-                    twitter_url: formData.twitterUrl,
-                    careers_page_url: formData.careersPageUrl,
+                    website: ensureUrlProtocol(formData.website),
+                    linkedin_url: ensureUrlProtocol(formData.linkedinUrl),
+                    twitter_url: ensureUrlProtocol(formData.twitterUrl),
+                    careers_page_url: ensureUrlProtocol(formData.careersPageUrl),
                     registered_address: formData.registeredAddress,
                     city: formData.city,
                     state: formData.state,
@@ -241,7 +250,7 @@ const CompanySettings = () => {
                     registration_number: formData.registrationNumber,
                     business_type: formData.businessType,
                     tax_id: formData.taxId,
-                    registration_date: formData.registrationDate,
+                    registration_date: formData.registrationDate || null,
                     registered_country: formData.registeredCountry,
                 };
             } else {
@@ -263,10 +272,10 @@ const CompanySettings = () => {
                     official_email: formData.officialEmail,
                     support_email: formData.supportEmail,
                     phone_number: formData.phoneNumber,
-                    website: formData.website,
-                    linkedin_url: formData.linkedinUrl,
-                    twitter_url: formData.twitterUrl,
-                    careers_page_url: formData.careersPageUrl,
+                    website: ensureUrlProtocol(formData.website),
+                    linkedin_url: ensureUrlProtocol(formData.linkedinUrl),
+                    twitter_url: ensureUrlProtocol(formData.twitterUrl),
+                    careers_page_url: ensureUrlProtocol(formData.careersPageUrl),
                 };
                 }
 
@@ -287,7 +296,7 @@ const CompanySettings = () => {
                     registration_number: formData.registrationNumber,
                     business_type: formData.businessType,
                     tax_id: formData.taxId,
-                    registration_date: formData.registrationDate,
+                    registration_date: formData.registrationDate || null,
                     registered_country: formData.registeredCountry,
                 };
                 }
@@ -373,9 +382,19 @@ const CompanySettings = () => {
                 'website', 'registeredAddress', 'city', 'country',
                 'registrationNumber', 'taxId', 'registeredCountry'
             ];
-            const hasAllFields = requiredFields.every(field => !!formData[field]?.toString().trim());
-            const hasDocs = formData.docRegistration && formData.docTax && formData.docProof;
-            return hasAllFields && hasDocs;
+            
+            const missingFields = requiredFields.filter(field => !formData[field]?.toString().trim());
+            const missingDocs = [];
+            if (!formData.docRegistration) missingDocs.push('Business Registration');
+            if (!formData.docTax) missingDocs.push('Tax ID');
+            if (!formData.docProof) missingDocs.push('Government Proof');
+
+            if (missingFields.length > 0 || missingDocs.length > 0) {
+                console.log("Missing Fields:", missingFields);
+                console.log("Missing Docs:", missingDocs);
+            }
+
+            return missingFields.length === 0 && missingDocs.length === 0;
         };
 
         const isVerificationLocked = formData.verificationStatus === 'pending' || formData.verificationStatus === 'verified';

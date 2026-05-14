@@ -7,6 +7,8 @@ import api from '../../api/axios';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
 
+import Header from '../../components/Header';
+
 const MyWorks = () => {
     const navigation = useNavigation();
     const [works, setWorks] = useState([]);
@@ -15,7 +17,7 @@ const MyWorks = () => {
 
     const fetchWorks = async () => {
         try {
-            const res = await api.get('/work-posts/');
+            const res = await api.get('work-posts/');
             setWorks(res.data);
         } catch (error) {
             console.error("Failed to fetch works:", error);
@@ -46,7 +48,7 @@ const MyWorks = () => {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            await api.delete(`/work-posts/${id}/delete/`);
+                            await api.delete(`work-posts/${id}/delete/`);
                             setWorks(prev => prev.filter(w => w.id !== id));
                         } catch (err) {
                             Alert.alert("Error", "Failed to delete the post.");
@@ -62,15 +64,18 @@ const MyWorks = () => {
     const renderWorkCard = ({ item: work }) => (
         <TouchableOpacity 
             style={styles.card}
-            onPress={() => navigation.navigate('AgreementDetails', { id: work.id })}
+            onPress={() => navigation.navigate('JobDetails', { id: `work_${work.id}` })}
         >
             <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{work.title}</Text>
+                <View style={{ flex: 1 }}>
+                    <Text style={styles.cardTitle}>{work.title}</Text>
+                    <Text style={styles.cardSubtitle}>{work.category}</Text>
+                </View>
                 <View style={[styles.statusBadge, 
-                    work.status === 'Active' ? { backgroundColor: '#eff6ff' } : { backgroundColor: '#f0fdf4' }
+                    work.status === 'active' ? { backgroundColor: '#f0fdf4' } : { backgroundColor: '#f1f5f9' }
                 ]}>
                     <Text style={[styles.statusText, 
-                        work.status === 'Active' ? { color: '#3b82f6' } : { color: '#16a34a' }
+                        work.status === 'active' ? { color: '#16a34a' } : { color: '#64748b' }
                     ]}>{work.status}</Text>
                 </View>
             </View>
@@ -78,20 +83,36 @@ const MyWorks = () => {
             <View style={styles.cardMeta}>
                 <View style={styles.metaItem}>
                     <Feather name="map-pin" size={12} color="#64748b" />
-                    <Text style={styles.metaText}>{work.location}</Text>
+                    <Text style={styles.metaText}>{work.city || work.work_nature}</Text>
                 </View>
                 <View style={styles.metaItem}>
                     <Feather name="clock" size={12} color="#64748b" />
                     <Text style={styles.metaText}>{new Date(work.created_at).toLocaleDateString()}</Text>
                 </View>
+                <View style={styles.metaItem}>
+                    <Feather name="users" size={12} color="#64748b" />
+                    <Text style={styles.metaText}>{work.applicant_count || 0} Apps</Text>
+                </View>
             </View>
+
+            {/* Show Agreement Status if it exists */}
+            {work.agreement_status && (
+                <View style={styles.agreementInfo}>
+                    <View style={styles.agreementDot} />
+                    <Text style={styles.agreementLabel}>Contract: </Text>
+                    <Text style={styles.agreementVal}>{work.agreement_status.replace('_', ' ').toUpperCase()}</Text>
+                </View>
+            )}
             
             <View style={styles.cardFooter}>
                 <View style={styles.budgetBox}>
-                    <Text style={styles.budgetLabel}>Budget</Text>
-                    <Text style={styles.budgetValue}>{work.budget_currency} {work.budget_amount}</Text>
+                    <Text style={styles.budgetLabel}>Budget Range</Text>
+                    <Text style={styles.budgetValue}>{work.currency} {work.budget_min} - {work.budget_max}</Text>
                 </View>
-                <Feather name="chevron-right" size={20} color="#cbd5e1" />
+                <View style={styles.viewDetailsBtn}>
+                    <Text style={styles.viewDetailsText}>Details</Text>
+                    <Feather name="arrow-right" size={14} color="#4f46e5" />
+                </View>
             </View>
         </TouchableOpacity>
     );
@@ -99,10 +120,7 @@ const MyWorks = () => {
     return (
         <View style={styles.container}>
             <Header />
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 16 }}>
-                    <Feather name="arrow-left" size={24} color="#0f172a" />
-                </TouchableOpacity>
+            <View style={styles.subHeader}>
                 <Text style={styles.headerTitle}>My Works</Text>
             </View>
 
@@ -129,40 +147,39 @@ const MyWorks = () => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    header: { flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+    subHeader: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#f8fafc' },
+    headerTitle: { fontSize: 24, fontWeight: '900', color: '#0f172a' },
     listContent: { padding: 20, gap: 16 },
     card: { backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', elevation: 1, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
     cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-    cardTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a', flex: 1, marginRight: 12 },
-    statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
+    cardTitle: { fontSize: 17, fontWeight: '900', color: '#0f172a' },
+    cardSubtitle: { fontSize: 12, color: '#64748b', marginTop: 2, fontWeight: '600' },
+    statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
     statusText: { fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' },
-    cardTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-    tag: { backgroundColor: '#eef2ff', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-    tagText: { fontSize: 12, fontWeight: 'bold', color: '#4f46e5' },
-    tagPlain: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#f1f5f9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-    tagTextPlain: { fontSize: 12, color: '#64748b', fontWeight: '500' },
-    cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 12 },
-    applicantsContainer: { backgroundColor: '#fffbeb', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-    applicantsText: { fontSize: 12, fontWeight: 'bold', color: '#b45309' },
-    actions: { flexDirection: 'row', gap: 12 },
-    iconBtn: { padding: 6, backgroundColor: '#f8fafc', borderRadius: 8 },
-    emptyContainer: { alignItems: 'center', marginTop: 60 },
-    emptyText: { marginTop: 16, fontSize: 15, color: '#64748b', fontWeight: '500' },
-    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-    modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, height: '85%' },
-    modalHeader: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-    modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
-    closeBtn: { padding: 4 },
-    modalScroll: { padding: 20 },
-    statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 24 },
-    statBox: { width: '47%', backgroundColor: '#f8fafc', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#f1f5f9' },
-    statLabel: { fontSize: 10, fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 },
-    statVal: { fontSize: 14, fontWeight: 'bold', color: '#334155' },
-    sectionHeader: { fontSize: 12, fontWeight: 'bold', color: '#0f172a', letterSpacing: 1, marginBottom: 8, marginTop: 16 },
-    descText: { fontSize: 14, color: '#475569', lineHeight: 22 },
-    reqItem: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-    reqText: { fontSize: 14, color: '#475569' }
+    cardMeta: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 },
+    metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    metaText: { fontSize: 12, color: '#64748b', fontWeight: '500' },
+    agreementInfo: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: '#f8fafc', 
+        padding: 10, 
+        borderRadius: 10, 
+        marginBottom: 16,
+        borderWidth: 1,
+        borderColor: '#f1f5f9'
+    },
+    agreementDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4f46e5', marginRight: 8 },
+    agreementLabel: { fontSize: 11, fontWeight: 'bold', color: '#64748b' },
+    agreementVal: { fontSize: 11, fontWeight: '900', color: '#0f172a' },
+    cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#f1f5f9', paddingTop: 16 },
+    budgetBox: { flex: 1 },
+    budgetLabel: { fontSize: 10, color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 2 },
+    budgetValue: { fontSize: 15, fontWeight: '900', color: '#0f172a' },
+    viewDetailsBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#eef2ff', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+    viewDetailsText: { fontSize: 12, fontWeight: 'bold', color: '#4f46e5' },
+    emptyContainer: { alignItems: 'center', marginTop: 80, gap: 16 },
+    emptyText: { fontSize: 15, color: '#94a3b8', fontWeight: '500' }
 });
 
 export default MyWorks;

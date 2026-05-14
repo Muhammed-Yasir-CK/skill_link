@@ -5,6 +5,7 @@ import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import api from '../../api/axios';
 import Loading from '../../components/Loading';
+import Header from '../../components/Header';
 
 const CompletedWorks = () => {
     const navigation = useNavigation();
@@ -69,7 +70,10 @@ const CompletedWorks = () => {
                 <TouchableOpacity 
                     style={styles.detailsBtn}
                     onPress={() => {
-                        // Navigate to agreement details if available
+                        if (!item.application_id) {
+                            Alert.alert("Info", "No agreement record found for this work.");
+                            return;
+                        }
                         navigation.navigate('AgreementDetails', { applicationId: item.application_id });
                     }}
                 >
@@ -84,14 +88,10 @@ const CompletedWorks = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Feather name="arrow-left" size={24} color="#0f172a" />
-                </TouchableOpacity>
-                <View style={{ marginLeft: 16 }}>
-                    <Text style={styles.headerTitle}>Completed Works</Text>
-                    <Text style={styles.headerSubtitle}>History of your successful gigs</Text>
-                </View>
+            <Header />
+            <View style={styles.subHeader}>
+                <Text style={styles.headerTitle}>Completed Works</Text>
+                <Text style={styles.headerSubtitle}>History of your successful gigs</Text>
             </View>
 
             <FlatList
@@ -118,8 +118,8 @@ const CompletedWorks = () => {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
     loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    header: { flexDirection: 'row', alignItems: 'center', padding: 20, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+    subHeader: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#f8fafc' },
+    headerTitle: { fontSize: 24, fontWeight: '900', color: '#0f172a' },
     headerSubtitle: { fontSize: 13, color: '#64748b', fontWeight: '500' },
     listContent: { padding: 20, gap: 16 },
     card: { backgroundColor: '#fff', padding: 20, borderRadius: 24, borderWidth: 1, borderColor: '#e2e8f0', elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },

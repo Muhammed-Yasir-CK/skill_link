@@ -217,3 +217,32 @@ class WalletTransaction(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.transaction_type} - {self.amount} MATIC"
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = [
+        ('application', 'Application Update'),
+        ('agreement', 'Agreement Update'),
+        ('payment', 'Payment Received'),
+        ('match', 'Job Match Alert'),
+        ('system', 'System Message'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications"
+    )
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, default='system')
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Metadata for linking
+    link = models.CharField(max_length=255, blank=True, null=True) 
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user.username}: {self.title}"

@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Feather } from '@expo/vector-icons';
 
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { NotificationProvider } from './src/context/NotificationContext';
 
 // Import All Pages (Paths adjusted for Mobile src/ structure)
 import Home from './src/pages/Home';
@@ -12,6 +13,7 @@ import JobDetails from './src/pages/JobDetails';
 import Company from './src/pages/Company';
 import Login from './src/pages/Login';
 import Signup from './src/pages/Signup';
+import Onboarding from './src/pages/Onboarding';
 import CompanyDashboard from './src/pages/CompanyDashboard';
 import PostJob from './src/pages/PostJob';
 import CompanyPostJob from './src/pages/CompanyPostJob';
@@ -134,6 +136,7 @@ function AppNavigator() {
     if (!user) {
         return (
             <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Onboarding" component={Onboarding} />
                 <Stack.Screen name="Home" component={Home} />
                 <Stack.Screen name="Login" component={Login} />
                 <Stack.Screen name="Signup" component={Signup} />
@@ -179,9 +182,11 @@ function AppNavigator() {
 export default function App() {
     return (
         <AuthProvider>
-            <NavigationContainer>
-                <AppNavigator />
-            </NavigationContainer>
+            <NotificationProvider>
+                <NavigationContainer>
+                    <AppNavigator />
+                </NavigationContainer>
+            </NotificationProvider>
         </AuthProvider>
     );
 }

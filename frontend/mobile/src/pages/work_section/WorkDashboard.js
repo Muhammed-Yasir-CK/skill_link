@@ -4,48 +4,64 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, A
 import Header from '../../components/Header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import api from '../../api/axios';
 
 const WorkDashboard = () => {
     const navigation = useNavigation();
     const [stats, setStats] = useState([
-        { label: 'Active Works', value: '0', color: '#3b82f6', key: 'active' },
-        { label: 'Applicants', value: '0', color: '#f59e0b', key: 'applicants' },
-        { label: 'In Progress', value: '0', color: '#6366f1', key: 'in_progress' },
-        { label: 'Completed', value: '0', color: '#10b981', key: 'completed' },
+        { label: 'Active', value: '0', color: '#3b82f6', key: 'active_works', icon: 'briefcase' },
+        { label: 'Applicants', value: '0', color: '#f59e0b', key: 'pending_applicants', icon: 'users' },
+        { label: 'In Progress', value: '0', color: '#6366f1', key: 'in_progress', icon: 'activity' },
+        { label: 'Completed', value: '0', color: '#10b981', key: 'completed', icon: 'check-circle' },
     ]);
     const [activities, setActivities] = useState([]);
+    const [recentWorks, setRecentWorks] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const formatTimeAgo = (timestamp) => {
+        if (!timestamp) return '';
+        try {
+            const seconds = Math.floor((new Date() - new Date(timestamp)) / 1000);
+            if (seconds < 60) return 'Just now';
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            return new Date(timestamp).toLocaleDateString();
+        } catch (e) { return ''; }
+    };
 
     const fetchData = async () => {
         try {
-            // Fetch Stats
             const statsRes = await api.get('work-stats/');
             const s = statsRes.data;
             setStats(prev => prev.map(item => ({
                 ...item,
-                value: String(s[item.key] || 0)
+                value: String(s[item.key] ?? 0)
             })));
 
-            // Fetch Recent Activities
             const activityRes = await api.get('work-activity/');
-            setActivities(activityRes.data.slice(0, 5));
+            const validActivities = (activityRes.data || []).filter(a => a.title || a.detail);
+            setActivities(validActivities.slice(0, 5));
 
-            // Fetch Recent Works
             const workRes = await api.get('work-posts/');
             setRecentWorks(workRes.data.slice(0, 3));
         } catch (error) {
-            console.error("Failed to fetch dashboard data:", error);
-            Alert.alert("Error", "Failed to fetch dashboard data.");
+            console.error("Dashboard sync failed:", error);
         } finally {
             setLoading(false);
             setRefreshing(false);
         }
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    // Real-time refresh when screen comes into focus
+    useFocusEffect(
+        useCallback(() => {
+            fetchData();
+        }, [])
+    );
 
     const onRefresh = useCallback(() => {
         setRefreshing(true);
@@ -56,8 +72,6 @@ const WorkDashboard = () => {
         return <Loading message="Loading work dashboard..." />;
     }
 
-    const totalApplicants = stats.find(s => s.key === 'applicants')?.value || '0';
-
     return (
         <View style={styles.container}>
             <Header />
@@ -67,19 +81,16 @@ const WorkDashboard = () => {
             >
                 {/* Hero Section */}
                 <View style={styles.hero}>
-                    <Text style={styles.heroTitle}>Manage your works</Text>
-                    <Text style={styles.heroSub}>
-                        {totalApplicants > 0 
-                            ? `You have ${totalApplicants} applicants waiting for review. Check them out or post a new requirement.`
-                            : "Track your job postings and applicants in real-time."
-                        }
-                    </Text>
+                    <View style={styles.heroContent}>
+                        <Text style={styles.heroTitle}>Work Manager</Text>
+                        <Text style={styles.heroSub}>Track your gigs and applicants in real-time.</Text>
+                    </View>
                     <TouchableOpacity 
                         style={styles.postBtn}
                         onPress={() => navigation.navigate('PostWork')}
                     >
-                        <Feather name="plus" size={18} color="#4f46e5" />
-                        <Text style={styles.postBtnText}>Post New Work</Text>
+                        <Feather name="plus" size={18} color="#fff" />
+                        <Text style={styles.postBtnText}>Post Gig</Text>
                     </TouchableOpacity>
                 </View>
 
@@ -89,83 +100,87 @@ const WorkDashboard = () => {
                         {stats.map((stat, idx) => (
                             <View key={idx} style={styles.statCard}>
                                 <View style={[styles.statDot, { backgroundColor: stat.color }]} />
-                                <Text style={styles.statLabel}>{stat.label}</Text>
-                                <Text style={styles.statValue}>{stat.value}</Text>
+                                <View>
+                                    <Text style={styles.statValue}>{stat.value}</Text>
+                                    <Text style={styles.statLabel}>{stat.label}</Text>
+                                </View>
                             </View>
                         ))}
                     </View>
 
-                    {/* Recent Updates */}
+                    {/* Recent Updates - Header always visible, content conditional */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeader}>
                             <Feather name="clock" size={18} color="#4f46e5" />
                             <Text style={styles.sectionTitle}>Recent Updates</Text>
                         </View>
-                        <View style={styles.updateCardList}>
-                            {activities.length === 0 ? (
-                                <Text style={styles.emptyText}>No recent updates.</Text>
-                            ) : (
-                                activities.map((activity, idx) => (
+                        {activities.length > 0 && (
+                            <View style={styles.updateCardList}>
+                                {activities.map((activity, idx) => (
                                     <View key={idx} style={[styles.updateItem, { 
-                                        backgroundColor: activity.type === 'application' ? '#fffbeb' : '#ecfdf5', 
-                                        borderColor: activity.type === 'application' ? '#fef3c7' : '#d1fae5' 
+                                        backgroundColor: activity.type === 'new_applicant' ? '#fffbeb' : '#ecfdf5', 
+                                        borderColor: activity.type === 'new_applicant' ? '#fef3c7' : '#d1fae5' 
                                     }]}>
                                         <View style={[styles.updateIcon, { 
-                                            backgroundColor: activity.type === 'application' ? '#fde68a' : '#a7f3d0' 
+                                            backgroundColor: activity.type === 'new_applicant' ? '#fde68a' : '#a7f3d0' 
                                         }]}>
-                                            {activity.type === 'application' ? (
-                                                <Text style={[styles.updateIconText, { color: '#b45309' }]}>+</Text>
+                                            {activity.type === 'new_applicant' ? (
+                                                <Feather name="user-plus" size={14} color="#b45309" />
                                             ) : (
-                                                <Feather name="check-circle" size={16} color="#047857" />
+                                                <Feather name="file-text" size={14} color="#047857" />
                                             )}
                                         </View>
                                         <View style={styles.updateContent}>
-                                            <Text style={styles.updateText}>{activity.description}</Text>
-                                            <Text style={styles.updateTime}>{activity.time_ago}</Text>
+                                            <Text style={styles.updateText} numberOfLines={1}>{activity.title}</Text>
+                                            <View style={styles.updateMeta}>
+                                                <Text style={styles.updateDetail}>{activity.detail}</Text>
+                                                <View style={styles.statusDotSmall} />
+                                                <Text style={styles.updateTime}>{formatTimeAgo(activity.timestamp)}</Text>
+                                            </View>
                                         </View>
                                     </View>
-                                ))
-                            )}
-                        </View>
+                                ))}
+                            </View>
+                        )}
+                        {activities.length === 0 && (
+                            <Text style={styles.emptyLabel}>No recent activity</Text>
+                        )}
                     </View>
 
                     {/* Quick Actions / Recent Works */}
                     <View style={styles.section}>
                         <View style={styles.sectionHeaderRow}>
-                            <Text style={styles.sectionTitle}>Recent Works</Text>
+                            <Text style={styles.sectionTitle}>Active Gigs</Text>
                             <TouchableOpacity onPress={() => navigation.navigate('MyWorks')}>
                                 <Text style={styles.viewAllText}>View All</Text>
                             </TouchableOpacity>
                         </View>
                         <View style={styles.worksList}>
-                            {recentWorks.length === 0 ? (
-                                <Text style={styles.emptyText}>No recent works found.</Text>
-                            ) : (
+                            {recentWorks.length > 0 ? (
                                 recentWorks.map(work => (
-                                    <View key={work.id} style={styles.workItem}>
+                                    <TouchableOpacity 
+                                        key={work.id} 
+                                        style={styles.workItem}
+                                        onPress={() => navigation.navigate('MyWorks')}
+                                    >
                                         <View style={styles.workMain}>
-                                            <Text style={styles.workTitle}>{work.title}</Text>
+                                            <Text style={styles.workTitle} numberOfLines={1}>{work.title}</Text>
                                             <View style={styles.workMeta}>
-                                                <View style={[styles.statusBadge, 
-                                                    work.status === 'Active' ? { backgroundColor: '#dbeafe' } :
-                                                    work.status === 'In Progress' ? { backgroundColor: '#e0e7ff' } :
-                                                    { backgroundColor: '#d1fae5' }
-                                                ]}>
-                                                    <Text style={[styles.statusText,
-                                                        work.status === 'Active' ? { color: '#1d4ed8' } :
-                                                        work.status === 'In Progress' ? { color: '#4338ca' } :
-                                                        { color: '#047857' }
-                                                    ]}>{work.status || 'Active'}</Text>
-                                                </View>
-                                                <Text style={styles.postedTime}>• Posted {new Date(work.created_at).toLocaleDateString()}</Text>
+                                                <Text style={styles.postedTime}>{work.created_at ? new Date(work.created_at).toLocaleDateString() : 'N/A'}</Text>
+                                                <View style={styles.statusDotSmall} />
+                                                <Text style={styles.workStatusText}>{work.status || 'Active'}</Text>
                                             </View>
                                         </View>
-                                        <View style={styles.applicantBadge}>
-                                            <Feather name="users" size={12} color="#d97706" />
-                                            <Text style={styles.applicantCount}>{work.applicant_count || 0}</Text>
-                                        </View>
-                                    </View>
+                                        {work.applicant_count > 0 && (
+                                            <View style={styles.applicantBadge}>
+                                                <Text style={styles.applicantCount}>{work.applicant_count}</Text>
+                                                <Feather name="users" size={10} color="#d97706" />
+                                            </View>
+                                        )}
+                                    </TouchableOpacity>
                                 ))
+                            ) : (
+                                <Text style={styles.emptyLabel}>No active gigs found</Text>
                             )}
                         </View>
                     </View>
@@ -177,112 +192,118 @@ const WorkDashboard = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' },
     hero: {
-        backgroundColor: '#4f46e5',
-        padding: 24,
-        paddingTop: 32,
-        paddingBottom: 40,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-    },
-    heroTitle: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-    heroSub: { fontSize: 14, color: '#e0e7ff', lineHeight: 20, marginBottom: 20 },
-    postBtn: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 24,
+        paddingVertical: 32,
         backgroundColor: '#fff',
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        gap: 8,
-        alignSelf: 'flex-start',
     },
-    postBtnText: { color: '#4f46e5', fontWeight: 'bold', fontSize: 15 },
-    content: { padding: 20, marginTop: -20 },
+    heroContent: { flex: 1 },
+    heroTitle: { fontSize: 28, fontWeight: '900', color: '#0f172a' },
+    heroSub: { fontSize: 13, color: '#64748b', marginTop: 4 },
+    postBtn: {
+        backgroundColor: '#4f46e5',
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 14,
+        gap: 6,
+        elevation: 4,
+        shadowColor: '#4f46e5',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+    },
+    postBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
+    content: { paddingHorizontal: 20 },
     statsGrid: {
         flexDirection: 'row',
         flexWrap: 'wrap',
-        justifyContent: 'space-between',
+        gap: 12,
         marginBottom: 24,
     },
     statCard: {
-        width: '48%',
+        flex: 1,
+        minWidth: '45%',
         backgroundColor: '#fff',
         padding: 16,
-        borderRadius: 16,
-        marginBottom: 16,
+        borderRadius: 20,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
         borderWidth: 1,
         borderColor: '#f1f5f9',
-        elevation: 1,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
     },
-    statDot: { width: 10, height: 10, borderRadius: 5, marginBottom: 12 },
-    statLabel: { fontSize: 11, fontWeight: 'bold', color: '#64748b', textTransform: 'uppercase', marginBottom: 4 },
-    statValue: { fontSize: 24, fontWeight: 'bold', color: '#0f172a' },
+    statDot: { width: 6, height: 6, borderRadius: 3 },
+    statValue: { fontSize: 20, fontWeight: '900', color: '#0f172a' },
+    statLabel: { fontSize: 11, color: '#64748b', fontWeight: '600' },
     section: {
         backgroundColor: '#fff',
+        borderRadius: 24,
         padding: 20,
-        borderRadius: 20,
         marginBottom: 20,
         borderWidth: 1,
         borderColor: '#f1f5f9',
     },
-    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
-    sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
-    sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#0f172a' },
-    viewAllText: { fontSize: 13, fontWeight: 'bold', color: '#4f46e5' },
+    sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 },
+    sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+    sectionTitle: { fontSize: 17, fontWeight: '900', color: '#0f172a' },
     updateCardList: { gap: 12 },
     updateItem: {
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 12,
         padding: 12,
-        borderRadius: 12,
+        borderRadius: 16,
         borderWidth: 1,
     },
     updateIcon: {
         width: 32,
         height: 32,
-        borderRadius: 16,
+        borderRadius: 12,
         alignItems: 'center',
         justifyContent: 'center',
     },
     updateIconText: { fontWeight: 'bold', fontSize: 13 },
     updateContent: { flex: 1 },
-    updateText: { fontSize: 13, color: '#1e293b', lineHeight: 20 },
-    updateBold: { fontWeight: 'bold' },
-    updateTime: { fontSize: 11, color: '#64748b', marginTop: 4 },
-    worksList: { gap: 12 },
+    updateText: { fontSize: 13, color: '#1e293b', lineHeight: 20, fontWeight: '500' },
+    updateMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+    updateDetail: { fontSize: 11, color: '#64748b', fontWeight: 'bold' },
+    updateTime: { fontSize: 11, color: '#94a3b8' },
+    viewAllText: { fontSize: 13, fontWeight: 'bold', color: '#4f46e5' },
+    worksList: { gap: 4 },
     workItem: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 12,
+        paddingVertical: 16,
         borderBottomWidth: 1,
         borderBottomColor: '#f1f5f9',
     },
     workMain: { flex: 1 },
-    workTitle: { fontSize: 14, fontWeight: 'bold', color: '#0f172a', marginBottom: 6 },
+    workTitle: { fontSize: 15, fontWeight: 'bold', color: '#1e293b', marginBottom: 4 },
     workMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    statusBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-    statusText: { fontSize: 10, fontWeight: 'bold' },
-    postedTime: { fontSize: 11, color: '#94a3b8' },
+    postedTime: { fontSize: 12, color: '#94a3b8', fontWeight: '500' },
+    statusDotSmall: { width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#cbd5e1' },
+    workStatusText: { fontSize: 12, color: '#10b981', fontWeight: 'bold' },
     applicantBadge: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 4,
-        backgroundColor: '#fffbeb',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        backgroundColor: '#f8fafc',
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#f1f5f9',
     },
-    applicantCount: { fontSize: 12, fontWeight: 'bold', color: '#b45309' },
-    emptyText: { fontSize: 14, color: '#64748b', fontStyle: 'italic' }
+    applicantCount: { fontSize: 13, fontWeight: '900', color: '#0f172a' },
+    emptyLabel: { fontSize: 13, color: '#94a3b8', fontStyle: 'italic', paddingVertical: 10 },
+    emptyContainer: { alignItems: 'center', paddingVertical: 30, gap: 12 },
+    emptyText: { fontSize: 14, color: '#94a3b8', fontWeight: '500' }
 });
 
 export default WorkDashboard;

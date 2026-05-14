@@ -1,9 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import Header from '../../components/Header';
 import Footer from '../../components/Footer';
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../../api/axios';
 
 import {
     LayoutDashboard,
@@ -15,13 +14,14 @@ import {
     FileText
 } from 'lucide-react';
 
-const JobSeekerLayout = () => {
-    // Hardcoded user for now, as in previous Dashboard
-    const [user, setUser] = useState(null);
+import { useNotifications } from '../../context/NotificationContext';
 
+const JobSeekerLayout = () => {
+    const [user, setUser] = useState(null);
+    const { unreadCount, fetchUnreadCount } = useNotifications();
 
     const navItems = [
-        { to: '.', label: 'Dashboard', icon: LayoutDashboard ,end: true},
+        { to: '.', label: 'Dashboard', icon: LayoutDashboard, end: true },
         { to: 'profile', label: 'Profile', icon: User },
         { to: 'applications', label: 'Applications', icon: Briefcase },
         { to: 'saved', label: 'Saved Jobs', icon: Heart },
@@ -29,45 +29,24 @@ const JobSeekerLayout = () => {
         { to: 'settings', label: 'Settings', icon: Settings },
     ];
 
-
-    useEffect(() => {
     const fetchUserProfile = async () => {
         try {
-            const token = localStorage.getItem("access");
-
-            if (!token) {
-                console.error("No access token found");
-                return;
-            }
-
-            const response = await axios.get(
-                "http://localhost:8000/api/accounts/seeker/profile/",
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
-            console.log("API RESPONSE:", response.data);
-
+            const response = await api.get('accounts/seeker/profile/');
             setUser({
                 name: response.data.full_name || "User",
                 role: "Job Seeker",
                 email: response.data.email || "",
                 profile_picture: response.data.profile_picture || null
             });
-
         } catch (error) {
-            console.error(
-                "Error fetching user profile:",
-                error.response?.data || error.message
-            );
+            console.error("Error fetching user profile:", error);
         }
     };
 
-    fetchUserProfile();
-}, []);
+    useEffect(() => {
+        fetchUserProfile();
+        fetchUnreadCount();
+    }, [fetchUnreadCount]);
 
 
     
@@ -121,6 +100,11 @@ const JobSeekerLayout = () => {
                                                 <>
                                                     <item.icon className={`w-5 h-5 transition-colors ${isActive ? 'text-brand-accent' : 'text-slate-400 group-hover:text-brand-navy'}`} />
                                                     {item.label}
+                                                    {item.label === 'Notifications' && unreadCount > 0 && (
+                                                        <span className="ml-2 px-1.5 py-0.5 text-[10px] font-bold bg-red-500 text-white rounded-full min-w-[18px] text-center shadow-sm">
+                                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                                        </span>
+                                                    )}
                                                     {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-accent animate-pulse" />}
                                                 </>
                                             )}
@@ -133,7 +117,7 @@ const JobSeekerLayout = () => {
                     </aside>
 
                     {/* Main Content Area */}
-                    <main className="flex-1 min-w-0">
+                    <main className="flex-1 min-w-0 min-h-[85vh]">
                         <Outlet />
                     </main>
                 </div>

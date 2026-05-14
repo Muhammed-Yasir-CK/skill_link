@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import api from '../../api/axios';
-import Loading from '../../components/Loading'; // Added Loading component import
+import Loading from '../../components/Loading'; 
+import Header from '../../components/Header';
 
 const PostWork = () => {
     const navigation = useNavigation();
@@ -387,10 +388,8 @@ const PostWork = () => {
 
     return (
         <SafeAreaView style={styles.container}>
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                    <Feather name="arrow-left" size={24} color="#0f172a" />
-                </TouchableOpacity>
+            <Header />
+            <View style={styles.subHeader}>
                 <Text style={styles.headerTitle}>Post Work</Text>
             </View>
 
@@ -440,9 +439,8 @@ const PostWork = () => {
 
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: '#f8fafc' },
-    header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingTop: 10, paddingBottom: 16, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
-    backBtn: { marginRight: 16 },
-    headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#0f172a' },
+    subHeader: { paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#f8fafc' },
+    headerTitle: { fontSize: 24, fontWeight: '900', color: '#0f172a' },
     stepperContainer: { backgroundColor: '#fff', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
     stepper: { paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center' },
     stepIndicator: { flexDirection: 'row', alignItems: 'center' },

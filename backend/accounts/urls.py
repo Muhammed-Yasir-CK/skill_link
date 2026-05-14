@@ -25,6 +25,8 @@ from .views import (
     AdminUserStatusView,
     AdminStatsView,
     CompanyStatsView,
+    MaticPriceView,
+    NotificationView,
 )
 
 urlpatterns = [
@@ -47,6 +49,9 @@ urlpatterns = [
     path('withdraw-matic/', WithdrawMaticView.as_view(), name='withdraw-matic'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('company/stats/', CompanyStatsView.as_view(), name='company_stats'),
+    path('matic-price/', MaticPriceView.as_view(), name='matic_price'),
+    path('notifications/', NotificationView.as_view(), name='notifications'),
+    path('notifications/<int:pk>/', NotificationView.as_view(), name='notification_detail'),
     
     # Admin URLs
     path('admin/companies/', AdminCompanyListView.as_view(), name='admin_company_list'),

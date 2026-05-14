@@ -6,55 +6,38 @@ import { useLocation } from "react-router-dom";
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 
+import { useSearchParams } from 'react-router-dom';
+
 const ReceivedApplications = () => {
     const navigate = useNavigate();
 
     const [applications, setApplications] = useState([]);
-
     const [selectedApp, setSelectedApp] = useState(null);
 
-
     const handleAction = async (id, action) => {
-
-    const newStatus = action === "accept" ? "Selected" : "Rejected";
-
-    try {
-
-        const res = await fetch(
-            `http://localhost:8000/api/company/update-application-status/${id}/`,
-            {
+        const newStatus = action === "accept" ? "Selected" : "Rejected";
+        try {
+            const res = await fetch(`http://localhost:8000/api/company/update-application-status/${id}/`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
                     "Authorization": `Bearer ${localStorage.getItem("access")}`
                 },
                 body: JSON.stringify({ status: newStatus })
+            });
+
+            if (!res.ok) throw new Error("Failed request");
+            const data = await res.json();
+
+            setApplications(prev => prev.map(app => app.id === id ? { ...app, status: data.status } : app));
+
+            if (selectedApp && selectedApp.id === id) {
+                setSelectedApp(prev => ({ ...prev, status: data.status }));
             }
-        );
-
-        if (!res.ok) {
-            const errorData = await res.json();
-            console.error("PATCH failed:", errorData);
-            throw new Error("Failed request");
+        } catch (err) {
+            console.error("Status update failed:", err);
         }
-
-        const data = await res.json();
-
-        setApplications(prev =>
-            prev.map(app =>
-                app.id === id ? { ...app, status: data.status } : app
-            )
-        );
-
-        if (selectedApp && selectedApp.id === id) {
-            setSelectedApp(prev => ({ ...prev, status: data.status }));
-        }
-
-    } catch (err) {
-        console.error("Status update failed:", err);
-    }
-};
-
+    };
 
     useEffect(() => {
         fetch("http://localhost:8000/api/worker/received-applications/", {

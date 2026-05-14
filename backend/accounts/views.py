@@ -12,7 +12,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import permissions
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from .serializers import MeSerializer,CompanyProfileSerializer,CompanyDocumentSerializer,JobSeekerProfileSerializer,JobSeekerDocumentSerializer,ChangePasswordSerializer, AdminUserSerializer
-from .models  import CompanyDocument,Company,JobSeekerProfile,JobSeekerDocument, CustomUser
+from .models  import CompanyDocument,Company,JobSeekerProfile,JobSeekerDocument, CustomUser, Notification
 from .razorpay_utils import create_order, verify_payment
 from .blockchain_utils import fund_agreement_on_chain
 from .wallet_utils import decrypt_private_key
@@ -606,6 +606,15 @@ class WalletDashboardView(APIView):
                 available_balance = round(float(w3.from_wei(balance_wei, 'ether')), 4)
             except Exception as e:
                 print(f"Error fetching live balance: {e}")
+            
+            # --- DEBUG BYPASS: In development mode, we use the database-calculated 
+            # balance so the UI reflects simulated transfers and earnings correctly.
+            if settings.DEBUG:
+                total_deposits = float(WalletTransaction.objects.filter(user=user, transaction_type='deposit').aggregate(Sum('amount'))['amount__sum'] or 0.0)
+                total_income = float(WalletTransaction.objects.filter(user=user, transaction_type='income').aggregate(Sum('amount'))['amount__sum'] or 0.0)
+                total_locks = float(WalletTransaction.objects.filter(user=user, transaction_type='escrow_lock').aggregate(Sum('amount'))['amount__sum'] or 0.0)
+                total_withdrawals = float(WalletTransaction.objects.filter(user=user, transaction_type='withdrawal').aggregate(Sum('amount'))['amount__sum'] or 0.0)
+                available_balance = round(total_deposits + total_income - total_locks - total_withdrawals, 8)
 
         # 2. Calculate Locked Escrow cleanly: Sum of lock MINUS Sum of release
         locked_in = float(WalletTransaction.objects.filter(
@@ -653,11 +662,16 @@ class WithdrawMaticView(APIView):
 
     def post(self, request):
         user = request.user
+        withdrawal_type = request.data.get('withdrawal_type', 'crypto') # 'crypto' or 'fiat'
         target_address = request.data.get('target_address')
         amount = request.data.get('amount')
         
-        if not target_address or not amount:
-            return Response({"error": "Target address and amount are required."}, status=400)
+        # Fiat specific fields
+        payment_method = request.data.get('payment_method', 'upi') # 'upi' or 'bank'
+        account_details = request.data.get('account_details') # UPI ID or Bank Details
+
+        if not amount:
+            return Response({"error": "Amount is required."}, status=400)
             
         try:
             matic_amount = float(amount)
@@ -672,24 +686,70 @@ class WithdrawMaticView(APIView):
         from .wallet_utils import decrypt_private_key
         private_key = decrypt_private_key(user.encrypted_private_key)
 
-        from .blockchain_utils import withdraw_matic
+        from .blockchain_utils import withdraw_matic, get_live_matic_price_inr
+        
         try:
-            tx_hash, receipt = withdraw_matic(private_key, target_address, matic_amount)
-            
-            # Log the withdrawal
-            WalletTransaction.objects.create(
-                user=user,
-                transaction_type='withdrawal',
-                amount=matic_amount,
-                tx_hash=tx_hash,
-                description=f"Withdrawal to {target_address}"
-            )
-            
-            return Response({
-                "success": True, 
-                "message": f"Successfully withdrawn {matic_amount} MATIC.",
-                "tx_hash": tx_hash
-            })
+            if withdrawal_type == 'fiat':
+                if not account_details:
+                    return Response({"error": "Bank/UPI details are required for fiat withdrawal."}, status=400)
+                
+                # For Fiat, we transfer the MATIC to Treasury
+                from eth_account import Account
+                treasury_address = Account.from_key(settings.TREASURY_PRIVATE_KEY).address
+                
+                matic_price = get_live_matic_price_inr()
+                inr_amount = round(matic_amount * matic_price, 2)
+                
+                # Perform the on-chain transfer to Treasury
+                tx_hash, receipt = withdraw_matic(private_key, treasury_address, matic_amount)
+                
+                # Log as Fiat Withdrawal
+                WalletTransaction.objects.create(
+                    user=user,
+                    transaction_type='withdrawal',
+                    amount=matic_amount,
+                    tx_hash=tx_hash,
+                    description=f"Fiat Withdrawal: ₹{inr_amount} via {payment_method.upper()} ({account_details})"
+                )
+                
+                return Response({
+                    "success": True,
+                    "message": f"Successfully processed fiat withdrawal of ₹{inr_amount}.",
+                    "tx_hash": tx_hash,
+                    "inr_amount": inr_amount
+                })
+            else:
+                # Standard Crypto Withdrawal
+                if not target_address:
+                    return Response({"error": "Target address is required for crypto withdrawal."}, status=400)
+                    
+                tx_hash, receipt = withdraw_matic(private_key, target_address, matic_amount)
+                
+                # Log the withdrawal
+                WalletTransaction.objects.create(
+                    user=user,
+                    transaction_type='withdrawal',
+                    amount=matic_amount,
+                    tx_hash=tx_hash,
+                    description=f"Withdrawal to {target_address}"
+                )
+
+                # --- INTERNAL TRANSFER LOGIC ---
+                recipient = CustomUser.objects.filter(wallet_address=target_address).first()
+                if recipient:
+                    WalletTransaction.objects.create(
+                        user=recipient,
+                        transaction_type='deposit',
+                        amount=matic_amount,
+                        tx_hash=tx_hash,
+                        description=f"Received from {user.username}"
+                    )
+                
+                return Response({
+                    "success": True, 
+                    "message": f"Successfully withdrawn {matic_amount} MATIC.",
+                    "tx_hash": tx_hash
+                })
         except ValueError as e:
             return Response({"error": str(e)}, status=400)
         except Exception as e:
@@ -806,3 +866,47 @@ class CompanyStatsView(APIView):
             "interviews": interviews,
             "shortlisted": shortlisted
         })
+
+class MaticPriceView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from .blockchain_utils import get_live_matic_price_inr
+        try:
+            price = get_live_matic_price_inr()
+            return Response({"matic_price_inr": price})
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+class NotificationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        notifications = Notification.objects.filter(user=request.user)
+        unread_count = notifications.filter(is_read=False).count()
+        data = {
+            "unread_count": unread_count,
+            "notifications": [{
+                "id": n.id,
+                "title": n.title,
+                "message": n.message,
+                "type": n.notification_type,
+                "is_read": n.is_read,
+                "created_at": n.created_at,
+                "link": n.link
+            } for n in notifications[:20]]
+        }
+        return Response(data)
+
+    def post(self, request):
+        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+        return Response({"detail": "All notifications marked as read."})
+
+    def patch(self, request, pk):
+        try:
+            n = Notification.objects.get(pk=pk, user=request.user)
+            n.is_read = True
+            n.save()
+            return Response({"detail": "Notification marked as read."})
+        except Notification.DoesNotExist:
+            return Response({"error": "Notification not found"}, status=404)

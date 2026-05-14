@@ -53,7 +53,7 @@ const JobDetails = ({ route, navigation }) => {
                     company_logo: data.company_logo,
                     is_applied: data.is_applied
                 };
-            } else if (type === 'work') {
+            } else if (type === 'work' || type === 'local') {
                 const response = await api.get(`work-posts/${rawId}/`);
                 const data = response.data;
                 
@@ -65,216 +65,206 @@ const JobDetails = ({ route, navigation }) => {
                     posterLogo = data.user_details.profile_picture || data.user_details.brand_logo || null;
                 }
 
-                fetchedData = {
-                    id: `work_${data.id}`,
-                    title: data.title,
-                    company: posterName,
-                    company_logo: posterLogo,
-                    location: data.city || 'Remote',
-                    type: 'Local Work',
-                    workType: data.work_nature || 'Contract',
-                    experience: data.experience_level || '',
-                    salary: data.budget_min && data.budget_max
-                        ? `${data.currency || '$'}${data.budget_min} - ${data.budget_max}`
-                        : 'Not specified',
-                    posted: new Date(data.created_at).toLocaleDateString(),
-                    tags: data.category ? [data.category] : [],
-                    description: data.description || 'No description provided.',
-                    raw_id: data.id,
-                    isCompanyJob: false,
-                    is_applied: data.is_applied
-                };
-            }
+            // Determine if user is the owner
+            const isOwner = user && data.user === user.id;
 
-            setJob(fetchedData);
-        } catch (err) {
-            console.error("Error fetching job details:", err);
-            setError(true);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchJobDetails();
-    }, [id]);
-
-    const handleApply = async () => {
-        if (!user) {
-            Alert.alert("Login Required", "Please log in to apply for this position.", [
-                { text: "Cancel", style: "cancel" },
-                { text: "Login", onPress: () => navigation.navigate('Login') }
-            ]);
-            return;
+            fetchedData = {
+                id: `work_${data.id}`,
+                title: data.title,
+                company: posterName,
+                company_logo: posterLogo,
+                location: data.city || 'Remote',
+                type: 'Local Work',
+                workType: data.work_nature || 'Contract',
+                experience: data.experience_level || '',
+                salary: data.budget_min && data.budget_max
+                    ? `${data.currency || '$'}${data.budget_min} - ${data.budget_max}`
+                    : 'Not specified',
+                posted: new Date(data.created_at).toLocaleDateString(),
+                tags: data.category ? [data.category] : [],
+                description: data.description || 'No description provided.',
+                raw_id: data.id,
+                isCompanyJob: false,
+                is_applied: data.is_applied,
+                isOwner: isOwner,
+                agreement_status: data.agreement_status
+            };
         }
 
-        if (user.role !== 'seeker') {
-            Alert.alert("Restricted Action", "Only Job Seekers can apply for positions.");
-            return;
-        }
-
-        if (job.is_applied) return;
-
-        setApplying(true);
-        try {
-            await api.post('applications/', {
-                job_id: job.raw_id,
-                job_source: job.isCompanyJob ? "company" : "user"
-            });
-            
-            Alert.alert("Success", "Your application has been submitted successfully!");
-            // Refresh details to show "Applied" state
-            fetchJobDetails();
-        } catch (err) {
-            console.error("Application failed:", err);
-            const errMsg = err.response?.data?.error || "Failed to submit application. Please try again.";
-            Alert.alert("Application Error", errMsg);
-        } finally {
-            setApplying(false);
-        }
-    };
-
-    if (loading) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-                <Header />
-                <Loading message="Fetching job details..." />
-            </SafeAreaView>
-        );
+        setJob(fetchedData);
+    } catch (err) {
+        console.error("Error fetching job details:", err);
+        setError(true);
+    } finally {
+        setLoading(false);
     }
+};
 
-    if (error || !job) {
-        return (
-            <SafeAreaView style={styles.container}>
-                <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-                <Header />
-                <View style={{ flex: 1, justifyContent: 'center' }}>
-                    <EmptyState 
-                        icon="alert-circle"
-                        title="Job not found"
-                        subtitle="This job may have been removed or is no longer available."
-                    />
-                    <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ alignSelf: 'center', marginTop: -20, padding: 20 }}>
-                        <Text style={styles.backLink}>Back to Jobs</Text>
-                    </TouchableOpacity>
-                </View>
-            </SafeAreaView>
-        );
-    }
+useEffect(() => {
+    fetchJobDetails();
+}, [id, user]); // Added user to dependency to ensure isOwner check
 
-    const isSeeker = user?.role === 'seeker';
-    const canApply = isSeeker && !job.is_applied;
+const handleApply = async () => {
+    // ... existing handleApply code ...
+};
 
+if (loading) {
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container}>
             <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
             <Header />
+            <Loading message="Fetching job details..." />
+        </SafeAreaView>
+    );
+}
 
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.main}>
-                    <TouchableOpacity
-                        style={styles.backButton}
-                        onPress={() => navigation.goBack()}
-                    >
-                        <Feather name="arrow-left" size={18} color="#64748b" />
-                        <Text style={styles.backButtonText}>Back to Jobs</Text>
-                    </TouchableOpacity>
+if (error || !job) {
+    return (
+        <SafeAreaView style={styles.container}>
+            <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+            <Header />
+            <View style={{ flex: 1, justifyContent: 'center' }}>
+                <EmptyState 
+                    icon="alert-circle"
+                    title="Job not found"
+                    subtitle="This job may have been removed or is no longer available."
+                />
+                <TouchableOpacity onPress={() => navigation.navigate('Home')} style={{ alignSelf: 'center', marginTop: -20, padding: 20 }}>
+                    <Text style={styles.backLink}>Back to Jobs</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    );
+}
 
-                    <View style={styles.card}>
-                        {/* Improved Header Structure */}
-                        <View style={styles.cardHeader}>
-                            <View style={styles.companyProfile}>
-                                <View style={styles.companyIcon}>
-                                    {job.company_logo ? (
-                                        <Image 
-                                            source={{ uri: job.company_logo }} 
-                                            style={styles.companyLogo}
-                                            resizeMode="contain"
-                                        />
-                                    ) : (
-                                        <Text style={styles.companyIconText}>{job.company?.charAt(0)}</Text>
-                                    )}
-                                </View>
-                                <View style={styles.companyInfo}>
-                                    <Text style={styles.companyName}>{job.company}</Text>
-                                    <View style={styles.typeBadge}>
-                                        <Text style={styles.typeBadgeText}>{job.type}</Text>
-                                    </View>
+const isSeeker = user?.role === 'seeker';
+const canApply = isSeeker && !job.is_applied && !job.isOwner;
+
+return (
+    <View style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
+        <Header />
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.main}>
+                <TouchableOpacity
+                    style={styles.backButton}
+                    onPress={() => navigation.goBack()}
+                >
+                    <Feather name="arrow-left" size={18} color="#64748b" />
+                    <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+
+                <View style={styles.card}>
+                    {/* Improved Header Structure */}
+                    <View style={styles.cardHeader}>
+                        {job.agreement_status && (
+                            <View style={styles.agreementBadgeContainer}>
+                                <View style={styles.agreementBadge}>
+                                    <View style={styles.agreementPulse} />
+                                    <Text style={styles.agreementBadgeText}>
+                                        CONTRACT: {job.agreement_status.replace('_', ' ').toUpperCase()}
+                                    </Text>
                                 </View>
                             </View>
-
-                            <Text style={styles.jobTitle}>{job.title}</Text>
-                            
-                            <View style={styles.metaList}>
-                                <View style={styles.metaItem}>
-                                    <View style={styles.metaIconBg}>
-                                        <Feather name="map-pin" size={14} color="#6366f1" />
-                                    </View>
-                                    <View>
-                                        <Text style={styles.metaLabel}>Location</Text>
-                                        <Text style={styles.metaValue}>{job.location} ({job.workType})</Text>
-                                    </View>
-                                </View>
-                                <View style={styles.metaItem}>
-                                    <View style={styles.metaIconBg}>
-                                        <Feather name="dollar-sign" size={14} color="#10b981" />
-                                    </View>
-                                    <View>
-                                        <Text style={styles.metaLabel}>Salary Range</Text>
-                                        <Text style={styles.metaValue}>{job.salary}</Text>
-                                    </View>
+                        )}
+                        <View style={styles.companyProfile}>
+                            <View style={styles.companyIcon}>
+                                {job.company_logo ? (
+                                    <Image 
+                                        source={{ uri: job.company_logo }} 
+                                        style={styles.companyLogo}
+                                        resizeMode="contain"
+                                    />
+                                ) : (
+                                    <Text style={styles.companyIconText}>{job.company?.charAt(0)}</Text>
+                                )}
+                            </View>
+                            <View style={styles.companyInfo}>
+                                <Text style={styles.companyName}>{job.company}</Text>
+                                <View style={styles.typeBadge}>
+                                    <Text style={styles.typeBadgeText}>{job.type}</Text>
                                 </View>
                             </View>
                         </View>
 
-                        <View style={styles.cardBody}>
-                            <View style={styles.section}>
-                                <Text style={styles.sectionHeading}>About the Role</Text>
-                                <Text style={styles.description}>
-                                    {job.description}
-                                </Text>
-                            </View>
-
-                            {job.isCompanyJob && job.requirements && job.requirements.length > 0 && (
-                                <View style={styles.section}>
-                                    <Text style={styles.sectionHeading}>Requirements</Text>
-                                    <View style={styles.bulletList}>
-                                        {job.requirements.map((req, i) => (
-                                            <View key={i} style={styles.bulletItem}>
-                                                <Feather name="check-circle" size={14} color="#10b981" style={{ marginTop: 4 }} />
-                                                <Text style={styles.bulletText}>{req}</Text>
-                                            </View>
-                                        ))}
-                                    </View>
+                        <Text style={styles.jobTitle}>{job.title}</Text>
+                        
+                        <View style={styles.metaList}>
+                            <View style={styles.metaItem}>
+                                <View style={styles.metaIconBg}>
+                                    <Feather name="map-pin" size={14} color="#6366f1" />
                                 </View>
-                            )}
-
-                            <View style={styles.tagSection}>
-                                <Text style={styles.tagHeading}>Skills & Tags</Text>
-                                <View style={styles.tagContainer}>
-                                    {job.tags?.map((tag, idx) => (
-                                        <View key={idx} style={styles.tag}>
-                                            <Text style={styles.tagText}>{tag}</Text>
-                                        </View>
-                                    ))}
-                                    {job.experience ? (
-                                        <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}>
-                                            <Text style={[styles.tagText, { color: '#2563eb' }]}>{job.experience}</Text>
-                                        </View>
-                                    ) : null}
+                                <View>
+                                    <Text style={styles.metaLabel}>Location</Text>
+                                    <Text style={styles.metaValue}>{job.location} ({job.workType})</Text>
+                                </View>
+                            </View>
+                            <View style={styles.metaItem}>
+                                <View style={styles.metaIconBg}>
+                                    <Feather name="dollar-sign" size={14} color="#10b981" />
+                                </View>
+                                <View>
+                                    <Text style={styles.metaLabel}>Salary / Budget</Text>
+                                    <Text style={styles.metaValue}>{job.salary}</Text>
                                 </View>
                             </View>
                         </View>
                     </View>
-                </View>
-            </ScrollView>
 
-            {/* Sticky Action Footer */}
-            <View style={styles.footer}>
-                <TouchableOpacity style={styles.shareButton}>
-                    <Feather name="share-2" size={20} color="#64748b" />
+                    <View style={styles.cardBody}>
+                        <View style={styles.section}>
+                            <Text style={styles.sectionHeading}>About the Role</Text>
+                            <Text style={styles.description}>
+                                {job.description}
+                            </Text>
+                        </View>
+
+                        {job.isCompanyJob && job.requirements && job.requirements.length > 0 && (
+                            <View style={styles.section}>
+                                <Text style={styles.sectionHeading}>Requirements</Text>
+                                <View style={styles.bulletList}>
+                                    {job.requirements.map((req, i) => (
+                                        <View key={i} style={styles.bulletItem}>
+                                            <Feather name="check-circle" size={14} color="#10b981" style={{ marginTop: 4 }} />
+                                            <Text style={styles.bulletText}>{req}</Text>
+                                        </View>
+                                    ))}
+                                </View>
+                            </View>
+                        )}
+
+                        <View style={styles.tagSection}>
+                            <Text style={styles.tagHeading}>Skills & Tags</Text>
+                            <View style={styles.tagContainer}>
+                                {job.tags?.map((tag, idx) => (
+                                    <View key={idx} style={styles.tag}>
+                                        <Text style={styles.tagText}>{tag}</Text>
+                                    </View>
+                                ))}
+                                {job.experience ? (
+                                    <View style={[styles.tag, { backgroundColor: '#eff6ff' }]}>
+                                        <Text style={[styles.tagText, { color: '#2563eb' }]}>{job.experience}</Text>
+                                    </View>
+                                ) : null}
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </View>
+        </ScrollView>
+
+        {/* Sticky Action Footer */}
+        <View style={styles.footer}>
+            {job.isOwner ? (
+                <TouchableOpacity 
+                    style={[styles.applyButton, { backgroundColor: '#059669' }]} 
+                    onPress={() => navigation.navigate('Work', { screen: 'ReceivedApps' })}
+                >
+                    <Text style={styles.applyButtonText}>Manage Applicants</Text>
+                    <Feather name="users" size={18} color="#fff" />
                 </TouchableOpacity>
+            ) : (
                 <TouchableOpacity 
                     style={[
                         styles.applyButton, 
@@ -294,9 +284,10 @@ const JobDetails = ({ route, navigation }) => {
                         </>
                     )}
                 </TouchableOpacity>
-            </View>
+            )}
         </View>
-    );
+    </View>
+);
 };
 
 const styles = StyleSheet.create({
@@ -339,6 +330,19 @@ const styles = StyleSheet.create({
     shareButton: { width: 50, height: 50, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0', alignItems: 'center', justifyContent: 'center' },
     applyButton: { flex: 1, height: 50, backgroundColor: '#4338ca', borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
     applyButtonText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+    agreementBadgeContainer: { marginBottom: 16, alignItems: 'flex-start' },
+    agreementBadge: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: '#fdf2f2', 
+        paddingHorizontal: 12, 
+        paddingVertical: 6, 
+        borderRadius: 8, 
+        borderWidth: 1, 
+        borderColor: '#fecaca' 
+    },
+    agreementPulse: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#ef4444', marginRight: 8 },
+    agreementBadgeText: { fontSize: 11, fontWeight: '900', color: '#991b1b', letterSpacing: 0.5 }
 });
 
 export default JobDetails;

@@ -15,6 +15,16 @@ from .serializers import WorkerApplicationSerializer,CompanyApplicationSerialize
 
 from django.shortcuts import get_object_or_404
 
+def create_notif(user, title, message, n_type='system', link=None):
+    from accounts.models import Notification
+    Notification.objects.create(
+        user=user,
+        title=title,
+        message=message,
+        notification_type=n_type,
+        link=link
+    )
+
 
 
 class JobApplicationViewSet(ModelViewSet):
@@ -250,6 +260,16 @@ class UpdateApplicationStatusView(APIView):
             if current_status == "Pending" and new_status == "Selected":
                 application.status = "Selected"
                 application.save()
+
+                # Notify seeker
+                create_notif(
+                    user=application.applicant,
+                    title=f"Congratulations! Selected for {application.get_job_title()}",
+                    message=f"You have been selected for the project. Please check your applications for the next steps.",
+                    n_type='application',
+                    link='/seeker/applications'
+                )
+
                 return Response({"message": "Candidate selected", "status": "Selected"})
 
             # Final statuses cannot be changed
@@ -293,6 +313,15 @@ class UpdateApplicationStatusView(APIView):
                 old_status=old_status,
                 new_status=new_status,
                 actor=request.user
+            )
+
+            # Notify seeker
+            create_notif(
+                user=application.applicant,
+                title=f"Status Update: {application.get_job_title()}",
+                message=f"Your application status has been updated to '{new_status}'.",
+                n_type='application',
+                link='/seeker/applications'
             )
 
             return Response({"message": "Status updated", "status": application.status})
@@ -389,6 +418,15 @@ class CreateAgreementView(APIView):
 
                 terms=request.data.get("terms", []),
                 on_chain_id=request.data.get("on_chain_id")
+            )
+
+            # Notify seeker about new agreement
+            create_notif(
+                user=application.applicant,
+                title=f"New Agreement: {job_title}",
+                message=f"A new work agreement has been created for your application. Please review and accept it.",
+                n_type='agreement',
+                link=f"/seeker/agreement/{application.id}"
             )
 
             return Response({
@@ -587,10 +625,29 @@ class SeekerRespondAgreementView(APIView):
         if action == "accept":
             agreement.status = "accepted"
             agreement.save()
+            
+            # Notify provider
+            create_notif(
+                user=agreement.provider,
+                title="Agreement Accepted",
+                message=f"The seeker has accepted the agreement for '{agreement.job_title}'. You can now proceed with payment.",
+                n_type='agreement',
+                link='/work-dashboard/applications'
+            )
+            
             return Response({"message": "Agreement accepted", "status": agreement.status})
         elif action == "reject":
             agreement.status = "rejected"
             agreement.save()
+            
+            # Notify provider
+            create_notif(
+                user=agreement.provider,
+                title="Agreement Rejected",
+                message=f"The seeker has rejected the agreement for '{agreement.job_title}'.",
+                n_type='agreement'
+            )
+            
             return Response({"message": "Agreement rejected", "status": agreement.status})
         elif action == "complete":
             # Releasing the funds to the seeker
@@ -645,6 +702,15 @@ class ProviderPayAgreementView(APIView):
         agreement.status = "in_progress"
         agreement.save()
 
+        # Notify seeker that payment is locked
+        create_notif(
+            user=agreement.seeker,
+            title="Payment Locked in Escrow",
+            message=f"Payment for '{agreement.job_title}' has been locked in the smart contract. You can start working now!",
+            n_type='payment',
+            link=f"/seeker/agreement/{agreement.application.id}"
+        )
+
         return Response({"message": "Payment successful, work is now in progress", "status": agreement.status, "tx_hash": tx_hash})
 
 
@@ -673,6 +739,15 @@ class SeekerSubmitWorkView(APIView):
 
         agreement.status = "submitted"
         agreement.save()
+
+        # Notify provider
+        create_notif(
+            user=agreement.provider,
+            title="Work Submitted",
+            message=f"The seeker has submitted work for '{agreement.job_title}'. Please review and approve.",
+            n_type='agreement',
+            link='/work-dashboard/applications'
+        )
 
         return Response({"message": "Work submitted successfully", "status": agreement.status})
 
@@ -744,6 +819,15 @@ class ProviderApproveWorkView(APIView):
         agreement.status = "completed"
         agreement.save()
         
+        # Notify seeker about payment release
+        create_notif(
+            user=agreement.seeker,
+            title="Payment Released!",
+            message=f"Your payment for '{agreement.job_title}' has been released to your wallet.",
+            n_type='payment',
+            link='/seeker/settings' # Link to wallet/settings
+        )
+
         from accounts.models import WalletTransaction
         
         # We must find the EXACT MATIC amount that was originally locked for this specific transaction hash.

@@ -255,7 +255,7 @@ const MyWorks = () => {
 
                             <div className="flex items-center gap-3 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
                                 {work.applicants > 0 && (
-                                    <Link to={`/work-dashboard/work/${work.id}/applicants`} className="text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors">
+                                    <Link to={`/work-dashboard/applications`} className="text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors">
                                         {work.applicants} Applicants
                                     </Link>
                                 )}

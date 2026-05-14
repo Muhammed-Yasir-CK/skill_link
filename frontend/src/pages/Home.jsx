@@ -42,7 +42,7 @@ const Home = () => {
         <div className="min-h-screen bg-brand-light flex flex-col font-sans">
             <Header />
 
-            <main className="flex-grow">
+            <main className="flex-grow min-h-[95vh]">
                 {/* Hero Section */}
                 <div className="bg-brand-navy pt-16 pb-32 px-4 relative overflow-hidden">
                     {/* Abstract background shapes */}

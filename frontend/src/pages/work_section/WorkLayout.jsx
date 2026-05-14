@@ -10,13 +10,14 @@ import {
     Briefcase,
     MessageSquare,
     Settings,
-    ArrowLeft
+    ArrowLeft,
+    Bell
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-const WorkLayout = () => {
-    // Hardcoded user for context
-    const [user, setUser] = useState(null);
+import api from '../../api/axios';
 
+const WorkLayout = () => {
+    const [user, setUser] = useState(null);
 
     const navItems = [
         { path: '', end: true, label: 'Dashboard', icon: LayoutDashboard },
@@ -27,26 +28,16 @@ const WorkLayout = () => {
         { path: 'payment-settings', label: 'Payment Settings', icon: Settings },
     ];
 
+    const fetchUser = async () => {
+        try {
+            const res = await api.get('accounts/me/');
+            setUser(res.data);
+        } catch (error) {
+            console.error("Failed to fetch user:", error);
+        }
+    };
 
     useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const res = await fetch("http://localhost:8000/api/accounts/me/", {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem("access")}`
-                    }
-                });
-
-                if (!res.ok) return;
-
-                const data = await res.json();
-                setUser(data);
-
-            } catch (error) {
-                console.error("Failed to fetch user:", error);
-            }
-        };
-
         fetchUser();
     }, []);
 
@@ -115,7 +106,7 @@ const WorkLayout = () => {
                     </aside>
 
                     {/* Main Content Area */}
-                    <main className="flex-1 min-w-0">
+                    <main className="flex-1 min-w-0 min-h-[85vh]">
                         <Outlet />
                     </main>
                 </div>

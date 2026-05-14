@@ -350,7 +350,7 @@ const Jobs = ({ user }) => {
                         </Link>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto relative pb-10">
+                    <div className="relative pb-32">
                         <table className="w-full text-left">
                             <thead className="bg-slate-50/50 text-slate-500 font-semibold text-xs uppercase tracking-wider border-b border-slate-100">
                                 <tr>
@@ -416,7 +416,7 @@ const Jobs = ({ user }) => {
                                             {activeDropdown === job.id && (
                                                 <>
                                                     <div className="fixed inset-0 z-10 cursor-default" onClick={(e) => toggleDropdown(null, e)}></div>
-                                                    <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-xl shadow-xl border border-slate-100 z-20 py-1 overflow-visible text-left" onClick={e => e.stopPropagation()}>
+                                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-2xl border border-slate-100 z-50 py-2 text-left animate-in fade-in slide-in-from-top-2 duration-200" onClick={e => e.stopPropagation()}>
                                                         {/* <button className="w-full text-left px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-brand-navy flex items-center gap-2">
                                                             <Settings className="w-4 h-4" /> Edit Job
                                                         </button> */}

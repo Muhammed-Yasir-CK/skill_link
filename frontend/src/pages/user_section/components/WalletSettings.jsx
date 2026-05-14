@@ -21,7 +21,9 @@ const WalletSettings = ({ initialWalletAddress, onUpdate }) => {
     });
     
     const [showWithdraw, setShowWithdraw] = useState(false);
-    const [withdrawForm, setWithdrawForm] = useState({ address: '', amount: '' });
+    const [withdrawTab, setWithdrawTab] = useState('crypto'); // 'crypto' or 'fiat'
+    const [withdrawForm, setWithdrawForm] = useState({ address: '', amount: '', details: '', method: 'upi' });
+    const [maticPrice, setMaticPrice] = useState(0);
     
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -67,6 +69,13 @@ const WalletSettings = ({ initialWalletAddress, onUpdate }) => {
                     earned: data.total_earned,
                     history: data.history
                 });
+            }
+            
+            // Also fetch live price
+            const priceRes = await fetch(`${API_BASE}/matic-price/`, { headers: getAuthHeaders() });
+            if (priceRes.ok) {
+                const priceData = await priceRes.json();
+                setMaticPrice(priceData.matic_price_inr);
             }
         } catch (err) {
             console.error("Dashboard fetch error", err);
@@ -166,18 +175,36 @@ const WalletSettings = ({ initialWalletAddress, onUpdate }) => {
             setMessage({ type: 'error', text: 'No available MATIC to withdraw.' });
             return;
         }
+        
+        if (withdrawTab === 'fiat' && !withdrawForm.details) {
+            setMessage({ type: 'error', text: 'Please provide Bank/UPI details.' });
+            return;
+        }
+
         setLoading(true);
         try {
+            const payload = {
+                withdrawal_type: withdrawTab,
+                amount: withdrawForm.amount,
+            };
+
+            if (withdrawTab === 'crypto') {
+                payload.target_address = withdrawForm.address;
+            } else {
+                payload.payment_method = withdrawForm.method;
+                payload.account_details = withdrawForm.details;
+            }
+
             const res = await fetch(`${API_BASE}/withdraw-matic/`, {
                 method: "POST",
                 headers: getAuthHeaders(),
-                body: JSON.stringify({ target_address: withdrawForm.address, amount: withdrawForm.amount })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             if (res.ok) {
-                setMessage({ type: 'success', text: `Successfully withdrawn MATIC!` });
+                setMessage({ type: 'success', text: `Successfully withdrawn ${withdrawTab === 'fiat' ? 'to INR' : 'MATIC'}!` });
                 setShowWithdraw(false);
-                setWithdrawForm({ address: '', amount: '' });
+                setWithdrawForm({ address: '', amount: '', details: '', method: 'upi' });
                 fetchDashboard();
             } else {
                 setMessage({ type: 'error', text: data.error || 'Withdrawal failed' });
@@ -283,26 +310,26 @@ const WalletSettings = ({ initialWalletAddress, onUpdate }) => {
 
                     {/* Actions and Address */}
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
-                        <div className="bg-slate-50 px-8 py-5 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="font-black text-slate-900 text-xs uppercase tracking-widest">
+                                <span className="font-black text-slate-900 text-xs uppercase tracking-widest whitespace-nowrap">
                                     Polygon Network Active
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => setShowWithdraw(!showWithdraw)}
-                                    className="bg-indigo-600 text-white hover:bg-indigo-700 px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-2"
+                                    className="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-md shadow-indigo-100 active:scale-95"
                                 >
-                                    <Send className="w-3.5 h-3.5" /> Withdraw MATIC
+                                    <Send className="w-3 h-3" /> Withdraw
                                 </button>
                                 <button
                                     onClick={handleDisconnect}
                                     disabled={loading}
-                                    className="px-5 py-2 text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-tighter bg-red-50 hover:bg-red-100 rounded-xl transition-colors"
+                                    className="px-4 py-2 text-[10px] font-black text-red-500 hover:text-red-700 uppercase tracking-tight bg-red-50 hover:bg-red-100 rounded-xl transition-colors whitespace-nowrap"
                                 >
-                                    {loading ? 'Removing...' : 'Remove'}
+                                    {loading ? '...' : 'Remove'}
                                 </button>
                             </div>
                         </div>
@@ -310,38 +337,114 @@ const WalletSettings = ({ initialWalletAddress, onUpdate }) => {
                         {/* Withdraw Form Dropdown */}
                         {showWithdraw && (
                             <div className="p-8 bg-indigo-50/50 border-b border-indigo-100">
-                                <h4 className="font-black text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-wide text-sm">
-                                    <ExternalLink className="w-4 h-4" /> Withdraw to External Wallet
-                                </h4>
-                                <form onSubmit={handleWithdraw} className="flex flex-col md:flex-row gap-4">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Polygon target address (0x...)" 
-                                        required
-                                        className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-sm font-mono outline-none"
-                                        value={withdrawForm.address}
-                                        onChange={e => setWithdrawForm({...withdrawForm, address: e.target.value})}
-                                    />
-                                    <div className="relative">
-                                        <input 
-                                            type="number" 
-                                            step="0.0001"
-                                            placeholder="Amount" 
-                                            required
-                                            max={dashboard.available}
-                                            className="w-full md:w-32 pl-4 pr-12 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-sm outline-none"
-                                            value={withdrawForm.amount}
-                                            onChange={e => setWithdrawForm({...withdrawForm, amount: e.target.value})}
-                                        />
-                                        <span className="absolute right-4 top-3 text-xs font-black text-slate-400 uppercase">MAT</span>
-                                    </div>
+                                <div className="flex items-center gap-4 mb-6 bg-white p-1 rounded-2xl border border-slate-200 w-fit">
                                     <button 
-                                        type="submit" 
-                                        disabled={loading}
-                                        className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-700 disabled:opacity-50"
+                                        onClick={() => setWithdrawTab('crypto')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${withdrawTab === 'crypto' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
                                     >
-                                        Execute
+                                        Crypto Wallet
                                     </button>
+                                    <button 
+                                        onClick={() => setWithdrawTab('fiat')}
+                                        className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${withdrawTab === 'fiat' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:text-slate-600'}`}
+                                    >
+                                        Bank / UPI (INR)
+                                    </button>
+                                </div>
+
+                                <h4 className="font-black text-indigo-900 mb-4 flex items-center gap-2 uppercase tracking-wide text-sm">
+                                    {withdrawTab === 'crypto' ? <ExternalLink className="w-4 h-4" /> : <Activity className="w-4 h-4" />}
+                                    {withdrawTab === 'crypto' ? 'Withdraw to External Wallet' : 'Withdraw to Real Money (INR)'}
+                                </h4>
+
+                                <form onSubmit={handleWithdraw} className="space-y-4">
+                                    <div className="flex flex-col gap-4">
+                                        {withdrawTab === 'crypto' ? (
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Polygon target address (0x...)" 
+                                                    required
+                                                    className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-sm font-mono outline-none min-w-0"
+                                                    value={withdrawForm.address}
+                                                    onChange={e => setWithdrawForm({...withdrawForm, address: e.target.value})}
+                                                />
+                                                <div className="relative w-full sm:w-40">
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.0001"
+                                                        placeholder="Amount" 
+                                                        required
+                                                        max={dashboard.available}
+                                                        className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-sm outline-none"
+                                                        value={withdrawForm.amount}
+                                                        onChange={e => setWithdrawForm({...withdrawForm, amount: e.target.value})}
+                                                    />
+                                                    <span className="absolute right-4 top-3.5 text-[10px] font-black text-slate-400 uppercase">MAT</span>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex flex-col sm:flex-row gap-3">
+                                                    <select 
+                                                        className="sm:w-40 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-600 outline-none text-sm font-bold text-slate-700 bg-white"
+                                                        value={withdrawForm.method}
+                                                        onChange={e => setWithdrawForm({...withdrawForm, method: e.target.value})}
+                                                    >
+                                                        <option value="upi">UPI ID</option>
+                                                        <option value="bank">Bank Account</option>
+                                                    </select>
+                                                    <input 
+                                                        type="text" 
+                                                        placeholder={withdrawForm.method === 'upi' ? "Enter UPI ID (e.g., user@okaxis)" : "A/C No, IFSC, Name"} 
+                                                        required
+                                                        className="flex-1 px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-sm outline-none min-w-0"
+                                                        value={withdrawForm.details}
+                                                        onChange={e => setWithdrawForm({...withdrawForm, details: e.target.value})}
+                                                    />
+                                                </div>
+                                                <div className="relative w-full sm:w-48">
+                                                    <input 
+                                                        type="number" 
+                                                        step="0.0001"
+                                                        placeholder="Amount to Withdraw" 
+                                                        required
+                                                        max={dashboard.available}
+                                                        className="w-full pl-4 pr-12 py-3 rounded-xl border-2 border-slate-200 focus:border-indigo-600 focus:ring-0 text-sm outline-none"
+                                                        value={withdrawForm.amount}
+                                                        onChange={e => setWithdrawForm({...withdrawForm, amount: e.target.value})}
+                                                    />
+                                                    <span className="absolute right-4 top-3.5 text-[10px] font-black text-slate-400 uppercase">MAT</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        
+                                        <button 
+                                            type="submit" 
+                                            disabled={loading}
+                                            className="w-full sm:w-fit bg-indigo-600 text-white px-10 py-3.5 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-indigo-700 disabled:opacity-50 shadow-lg shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                        >
+                                            {loading ? 'Processing...' : 'Confirm Withdrawal'}
+                                        </button>
+                                    </div>
+
+                                    {withdrawTab === 'fiat' && withdrawForm.amount > 0 && maticPrice > 0 && (
+                                        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center text-emerald-600">
+                                                    <ArrowRightLeft className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Estimated Value</p>
+                                                    <p className="text-lg font-black text-emerald-700">₹{(withdrawForm.amount * maticPrice).toLocaleString('en-IN')}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rate</p>
+                                                <p className="text-xs font-bold text-slate-500">1 MATIC ≈ ₹{maticPrice}</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </form>
                             </div>
                         )}

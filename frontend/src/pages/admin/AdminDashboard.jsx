@@ -28,10 +28,10 @@ const AdminDashboard = () => {
             const res = await api.get('accounts/admin/stats/');
             const data = res.data;
             setStats([
-                { title: 'Total Job Seekers', value: data.seekers.toLocaleString(), icon: Users, color: 'bg-blue-500', trend: 0 },
-                { title: 'Registered Companies', value: data.companies.toLocaleString(), icon: Building2, color: 'bg-purple-500', trend: 0 },
-                { title: 'Active Job Posts', value: data.jobs.toLocaleString(), icon: Briefcase, color: 'bg-brand-accent', trend: 0 },
-                { title: 'Pending Verifications', value: data.pending.toLocaleString(), icon: AlertTriangle, color: 'bg-red-500', trend: 0 },
+                { title: 'Total Job Seekers', value: data.seekers.toLocaleString(), icon: Users, color: 'bg-blue-500', },
+                { title: 'Registered Companies', value: data.companies.toLocaleString(), icon: Building2, color: 'bg-purple-500' },
+                { title: 'Active Job Posts', value: data.jobs.toLocaleString(), icon: Briefcase, color: 'bg-brand-accent' },
+                { title: 'Pending Verifications', value: data.pending.toLocaleString(), icon: AlertTriangle, color: 'bg-red-500' },
             ]);
         } catch (err) {
             console.error("Failed to fetch stats:", err);

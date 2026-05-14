@@ -14,11 +14,23 @@ class WorkPostSerializer(serializers.ModelSerializer):
     )
     is_saved = serializers.SerializerMethodField()
     saved_id = serializers.SerializerMethodField()
-    applicants = serializers.SerializerMethodField()
+    applicant_count = serializers.SerializerMethodField()
     is_applied = serializers.SerializerMethodField()
+    agreement_status = serializers.SerializerMethodField()
+
     class Meta:
         model = WorkPost
-        exclude = ['user', 'is_active']
+        fields = '__all__'
+        read_only_fields = ['user', 'created_at']
+
+    def get_agreement_status(self, obj):
+        from applications.models import WorkAgreement
+        # Check if any agreement exists for this job via its applications
+        agreement = WorkAgreement.objects.filter(application__user_job=obj).first()
+        return agreement.status if agreement else None
+
+    def get_applicant_count(self, obj):
+        return obj.applications.count()
 
     def validate(self, data):
         budget_min = data.get('budget_min')

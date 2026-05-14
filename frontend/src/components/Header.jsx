@@ -17,7 +17,7 @@ const Header = () => {
     const buttonRef = useRef(null);
     const navigate = useNavigate();
     // const { logout } = useAuth();
-    
+
     const location = useLocation();
     const isPostJobPage = location.pathname === '/post-job';
     const isWorkMode = location.pathname.startsWith('/work-dashboard');
@@ -57,7 +57,7 @@ const Header = () => {
         logout();
         navigate('/login', { replace: true });
     };
-user?.role
+    user?.role
     return (
         <header className="bg-brand-navy border-b border-white/10 sticky top-0 z-50 transition-all duration-300">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -76,8 +76,8 @@ user?.role
                     <nav className="hidden md:flex space-x-8 absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
                         {user?.role !== 'company' && !isPostJobPage && !isWorkMode && (
                             <>
-                                <Link to="/" className="text-slate-300  hover:text-brand-accent font-medium transition-colors text-sm uppercase tracking-wide">Find Jobs</Link>
-                                <Link to="/companies" className="text-slate-300  hover:text-brand-accent font-medium transition-colors text-sm uppercase tracking-wide">Companies</Link>
+                                {/* <Link to="/" className="text-slate-300  hover:text-brand-accent font-medium transition-colors text-sm uppercase tracking-wide">Find Jobs</Link> */}
+                                {/* <Link to="/companies" className="text-slate-300  hover:text-brand-accent font-medium transition-colors text-sm uppercase tracking-wide">Companies</Link> */}
                             </>
                         )}
                     </nav>
@@ -156,7 +156,7 @@ user?.role
                                                         Settings
                                                     </Link>
                                                 </>
-                                            ) :isWorkMode ? (
+                                            ) : isWorkMode ? (
                                                 <></>
                                             ) : (
                                                 <>
@@ -173,7 +173,7 @@ user?.role
                                                         onClick={handleLinkClick}
                                                         to="/seeker/applications"
                                                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors group"
-                                                        >
+                                                    >
                                                         <Briefcase className="w-4 h-4 text-slate-400 group-hover:text-brand-accent transition-colors" />
                                                         Applications
                                                     </Link>
@@ -186,7 +186,7 @@ user?.role
                                                         <Bell className="w-4 h-4 text-slate-400 group-hover:text-brand-accent transition-colors" />
                                                         Notifications
                                                     </Link>
-                                                    
+
 
                                                     <Link onClick={handleLinkClick} to="/seeker/settings" className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-white hover:bg-white/5 transition-colors group">
                                                         <Settings className="w-4 h-4 text-slate-400 group-hover:text-brand-accent transition-colors" />
@@ -234,10 +234,10 @@ user?.role
                     <div className="md:hidden bg-brand-navy border-b border-white/10">
                         <div className="px-4 py-3 space-y-3">
                             {user?.role !== 'Company' && !isPostJobPage && !isWorkMode && (
-                                
+
                                 <>
-                                    <Link to="/" className="block text-slate-300 font-medium hover:text-white">Find Jobs</Link>
-                                    <Link to="/companies" className="block text-slate-300 font-medium hover:text-white">Companies</Link>
+                                    {/* <Link to="/" className="block text-slate-300 font-medium hover:text-white">Find Jobs</Link> */}
+                                    {/* <Link to="/companies" className="block text-slate-300 font-medium hover:text-white">Companies</Link> */}
                                 </>
                             )}
                             <div className="pt-3 border-t border-slate-700 flex flex-col gap-3">
@@ -270,9 +270,9 @@ user?.role
                                                     <Settings className="w-4 h-4" /> Settings
                                                 </Link>
                                             </>
-                                        ) :isWorkMode ? (
-                                                <></>
-                                            ) : (
+                                        ) : isWorkMode ? (
+                                            <></>
+                                        ) : (
                                             <>
                                                 <Link onClick={handleLinkClick} to="/seeker" className="text-left text-slate-300 font-medium hover:text-white flex items-center gap-2">
                                                     <LayoutDashboard className="w-4 h-4" /> Dashboard
@@ -302,11 +302,11 @@ user?.role
                                             // <Link to="/post-job" className="block text-center bg-brand-accent text-brand-navy px-4 py-2.5 rounded-full font-bold w-full mt-2">
                                             //     Post a Job
                                             // </Link>
-                                            
+
                                             <Link to="/work-dashboard" onClick={handleLinkClick} className="block text-center border border-white/20 text-slate-300 px-4 py-2 rounded-lg hover:bg-white/5" >
-                                            Switch to Post Work
+                                                Switch to Post Work
                                             </Link>
-                                            
+
                                         )}
 
                                     </>

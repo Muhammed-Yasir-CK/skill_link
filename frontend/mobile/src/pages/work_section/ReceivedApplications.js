@@ -18,7 +18,7 @@ const ReceivedApplications = () => {
 
     const fetchApplications = async () => {
         try {
-            const res = await api.get('/worker/received-applications/');
+            const res = await api.get('worker/received-applications/');
             setApplications(res.data);
         } catch (error) {
             console.error("Failed to fetch applications:", error);
@@ -42,7 +42,7 @@ const ReceivedApplications = () => {
         const newStatus = action === 'accept' ? 'Selected' : 'Rejected';
         try {
             setLoading(true);
-            const res = await api.patch(`/company/update-application-status/${id}/`, { status: newStatus });
+            const res = await api.patch(`company/update-application-status/${id}/`, { status: newStatus });
             
             setApplications(prev =>
                 prev.map(app => app.id === id ? { ...app, status: res.data.status } : app)

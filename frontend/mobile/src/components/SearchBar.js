@@ -60,6 +60,8 @@ const CustomPicker = ({ label, value, options, onSelect, icon }) => {
 };
 
 const SearchBar = ({ onSearch, filters, setFilters, categories = [] }) => {
+    const [showFilters, setShowFilters] = useState(false);
+
     const updateFilter = (name, value) => {
         setFilters(prev => ({
             ...prev,
@@ -69,81 +71,57 @@ const SearchBar = ({ onSearch, filters, setFilters, categories = [] }) => {
 
     return (
         <View style={styles.wrapper}>
-            <View style={styles.mainContainer}>
-                {/* Query Input */}
-                <View style={styles.inputGroup}>
-                    <Feather name="search" size={20} color="#94a3b8" style={styles.inputIcon} />
+            <View style={styles.searchRow}>
+                <View style={styles.searchField}>
+                    <Feather name="search" size={18} color="#64748b" />
                     <TextInput
-                        placeholder="Job title, keywords, or company"
+                        placeholder="Search skills, jobs..."
                         placeholderTextColor="#94a3b8"
                         style={styles.textInput}
                         value={filters.query}
                         onChangeText={(text) => updateFilter('query', text)}
                     />
                 </View>
-
-                {/* Location Input */}
-                <View style={styles.inputGroup}>
-                    <Feather name="map-pin" size={20} color="#94a3b8" style={styles.inputIcon} />
-                    <TextInput
-                        placeholder="City, state, or zip"
-                        placeholderTextColor="#94a3b8"
-                        style={styles.textInput}
-                        value={filters.location}
-                        onChangeText={(text) => updateFilter('location', text)}
-                    />
-                </View>
-
-                {/* Category Dropdown */}
-                <CustomPicker
-                    label="Category"
-                    value={filters.category}
-                    options={categories}
-                    onSelect={(val) => updateFilter('category', val)}
-                    icon="filter"
-                />
-
-                {/* Search Button */}
-                <TouchableOpacity
-                    style={styles.searchButton}
-                    onPress={onSearch}
-                    activeOpacity={0.8}
+                <TouchableOpacity 
+                    style={[styles.filterToggle, showFilters && styles.filterToggleActive]} 
+                    onPress={() => setShowFilters(!showFilters)}
                 >
-                    <Text style={styles.searchButtonText}>Find Jobs</Text>
+                    <Feather name="sliders" size={18} color={showFilters ? "#fff" : "#64748b"} />
                 </TouchableOpacity>
             </View>
 
-            {/* Advanced Filters */}
-            <View style={styles.advancedFiltersContainer}>
-                <Text style={styles.filterLabel}>Filters:</Text>
-                <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.advancedFiltersScroll}
-                >
-                    <CustomPicker
-                        label="Job Type"
-                        value={filters.type}
-                        options={['Full-time', 'Part-time', 'Contract']}
-                        onSelect={(val) => updateFilter('type', val)}
-                        icon="briefcase"
-                    />
-                    <CustomPicker
-                        label="Work Style"
-                        value={filters.workType}
-                        options={['Remote', 'Hybrid', 'Onsite']}
-                        onSelect={(val) => updateFilter('workType', val)}
-                        icon="home"
-                    />
-                    <CustomPicker
-                        label="Experience"
-                        value={filters.experience}
-                        options={['Junior', 'Mid', 'Senior']}
-                        onSelect={(val) => updateFilter('experience', val)}
-                        icon="activity"
-                    />
-                </ScrollView>
-            </View>
+            {showFilters && (
+                <View style={styles.expandedFilters}>
+                    <View style={styles.filterGrid}>
+                        <TextInput
+                            placeholder="Location"
+                            placeholderTextColor="#94a3b8"
+                            style={styles.inlineInput}
+                            value={filters.location}
+                            onChangeText={(text) => updateFilter('location', text)}
+                        />
+                        <CustomPicker
+                            label="Category"
+                            value={filters.category}
+                            options={categories}
+                            onSelect={(val) => updateFilter('category', val)}
+                            icon="tag"
+                        />
+                    </View>
+                    
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+                        {['Full-time', 'Part-time', 'Contract'].map(type => (
+                            <TouchableOpacity 
+                                key={type}
+                                style={[styles.chip, filters.type === type && styles.chipActive]}
+                                onPress={() => updateFilter('type', filters.type === type ? '' : type)}
+                            >
+                                <Text style={[styles.chipText, filters.type === type && styles.chipTextActive]}>{type}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </View>
+            )}
         </View>
     );
 };
@@ -151,47 +129,77 @@ const SearchBar = ({ onSearch, filters, setFilters, categories = [] }) => {
 const styles = StyleSheet.create({
     wrapper: {
         backgroundColor: 'white',
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 32,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
+        borderRadius: 20,
+        padding: 12,
+        marginBottom: 24,
         ...Platform.select({
             ios: {
-                shadowColor: '#64748b',
-                shadowOffset: { width: 0, height: 10 },
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
                 shadowOpacity: 0.1,
-                shadowRadius: 20,
+                shadowRadius: 12,
             },
             android: {
-                elevation: 10,
+                elevation: 6,
             }
         })
     },
-    mainContainer: {
-        gap: 12,
-    },
-    inputGroup: {
+    searchRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#f8fafc',
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#e2e8f0',
-        paddingHorizontal: 16,
-        height: 56,
+        gap: 12,
     },
-    inputIcon: {
-        marginRight: 12,
+    searchField: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#f1f5f9',
+        borderRadius: 14,
+        paddingHorizontal: 14,
+        height: 50,
     },
     textInput: {
         flex: 1,
         fontSize: 15,
         fontWeight: '500',
         color: '#334155',
+        marginLeft: 10,
+    },
+    filterToggle: {
+        width: 50,
+        height: 50,
+        backgroundColor: '#f1f5f9',
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    filterToggleActive: {
+        backgroundColor: '#1e1b4b',
+    },
+    expandedFilters: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: '#f1f5f9',
+    },
+    filterGrid: {
+        flexDirection: 'row',
+        gap: 10,
+        marginBottom: 16,
+    },
+    inlineInput: {
+        flex: 1,
+        backgroundColor: '#f8fafc',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        height: 44,
+        fontSize: 14,
+        color: '#334155',
+        borderWidth: 1,
+        borderColor: '#e2e8f0',
     },
     pickerWrapper: {
-        marginRight: 8,
+        flex: 1,
     },
     pickerButton: {
         flexDirection: 'row',
@@ -200,58 +208,39 @@ const styles = StyleSheet.create({
         borderRadius: 12,
         borderWidth: 1,
         borderColor: '#e2e8f0',
-        paddingHorizontal: 16,
-        height: 56,
+        paddingHorizontal: 12,
+        height: 44,
     },
     pickerValue: {
         flex: 1,
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: '500',
         color: '#334155',
+        marginLeft: 8,
     },
     pickerPlaceholder: {
         color: '#94a3b8',
     },
-    searchButton: {
+    chipScroll: {
+        marginHorizontal: -4,
+    },
+    chip: {
+        backgroundColor: '#f1f5f9',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginHorizontal: 4,
+    },
+    chipActive: {
         backgroundColor: '#1e1b4b',
-        height: 56,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginTop: 4,
-        ...Platform.select({
-            ios: {
-                shadowColor: '#1e1b4b',
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.2,
-                shadowRadius: 8,
-            },
-            android: {
-                elevation: 4,
-            }
-        })
     },
-    searchButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: 'bold',
-    },
-    advancedFiltersContainer: {
-        marginTop: 20,
-        paddingTop: 20,
-        borderTopWidth: 1,
-        borderTopColor: '#f1f5f9',
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    filterLabel: {
-        fontSize: 14,
+    chipText: {
+        fontSize: 13,
+        color: '#64748b',
         fontWeight: '600',
-        color: '#94a3b8',
-        marginRight: 12,
     },
-    advancedFiltersScroll: {
-        paddingRight: 20,
+    chipTextActive: {
+        color: '#fff',
     },
     modalOverlay: {
         flex: 1,

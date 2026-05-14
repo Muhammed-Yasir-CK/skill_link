@@ -72,7 +72,38 @@ class CompanyJobCreateView(APIView):
             
         serializer = JobSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(company=request.user)
+            job = serializer.save(company=request.user)
+            
+            # Job Matching Notification (Top 5 Match)
+            try:
+                from accounts.models import JobSeekerProfile, Notification
+                # Find seekers whose skills overlap with job tags
+                job_tags = [t.lower() for t in (job.tags or [])]
+                
+                # Simple keyword match on skills
+                all_seekers = JobSeekerProfile.objects.exclude(user=request.user).select_related('user')
+                matches = []
+                for seeker in all_seekers:
+                    seeker_skills = [s.lower() for s in (seeker.skills or [])]
+                    overlap = set(job_tags).intersection(set(seeker_skills))
+                    if overlap:
+                        matches.append((len(overlap), seeker))
+                
+                # Sort by overlap count and take top 5
+                matches.sort(key=lambda x: x[0], reverse=True)
+                top_matches = [m[1] for m in matches[:5]]
+
+                for seeker_profile in top_matches:
+                    Notification.objects.create(
+                        user=seeker_profile.user,
+                        title=f"Job Match: {job.title}",
+                        message=f"We found a job that matches your skills! {job.title} at {request.user.company_name}.",
+                        notification_type='match',
+                        link=f"/job/{job.id}"
+                    )
+            except Exception as e:
+                print(f"Error in job match notification: {e}")
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

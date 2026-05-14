@@ -116,7 +116,7 @@ const CompanyDashboard = () => {
  
   // 6. Final render
 return (
-  <div className="min-h-screen bg-slate-50/50 font-sans">
+  <div className="min-h-screen bg-slate-50/50 font-sans flex flex-col">
     <Header />
 
 
@@ -157,7 +157,7 @@ return (
       </div>
     </div>
 
-    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 pb-20">
+    <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 pb-32 flex-1 w-full min-h-[90vh]">
       {renderContent()}
     </main>
 

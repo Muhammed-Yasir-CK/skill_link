@@ -149,7 +149,7 @@ class MeSerializer(serializers.ModelSerializer):
 
 
 class CompanyProfileSerializer(serializers.ModelSerializer):
-    brand_logo = serializers.SerializerMethodField()
+    brand_logo = serializers.ImageField(required=False, allow_null=True)
     document_count = serializers.SerializerMethodField()
     posted_jobs_count = serializers.SerializerMethodField()
     email = serializers.CharField(source="user.email", read_only=True)
@@ -157,24 +157,36 @@ class CompanyProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = "__all__"
+        read_only_fields = ["id", "user", "created_at", "updated_at", "rejection_reason"]
 
-    def get_brand_logo(self, obj):
-        if obj.brand_logo:
-            request = self.context.get("request")
-            if request:
-                return request.build_absolute_uri(obj.brand_logo.url)
-            return obj.brand_logo.url
-        return None
+    def validate_verification_status(self, value):
+        # Allow users to only set status to 'pending'
+        # Prevent users from setting it to 'verified' or 'rejected' themselves
+        if value == 'pending':
+            return value
+        
+        # If the current status is already something else, or they try to cheat:
+        # We can either raise an error or just return the existing status
+        # For security, let's strictly allow only 'pending' if they are changing it
+        if value in ['verified', 'rejected']:
+             raise serializers.ValidationError("Only administrators can verify or reject companies.")
+        
+        return value
+
+    def validate_registration_date(self, value):
+        if value == "":
+            return None
+        return value
+
 
     def get_document_count(self, obj):
         return obj.documents.count()
 
     def get_posted_jobs_count(self, obj):
-        # Assuming we have a Job model with a ForeignKey to Company or User
-        # For now, let's just use a placeholder if the relationship isn't clear
-        # But looking at models.py, Company is related to User, and Jobs are likely related to User or Company
-        # Let's check imports in models.py or views.py to be sure
-        return getattr(obj.user, 'posted_jobs', obj).count() if hasattr(obj.user, 'posted_jobs') else 0
+        # Access through the related_name 'posted_jobs' on CustomUser
+        if hasattr(obj.user, 'posted_jobs'):
+            return obj.user.posted_jobs.count()
+        return 0
 
 class CompanyDocumentSerializer(serializers.ModelSerializer):
     class Meta:

@@ -79,10 +79,10 @@ const AgreementDetails = () => {
             let res;
             let currentRole = 'seeker';
             try {
-                res = await api.get(`/provider/get-agreement/${applicationId}/`);
+                res = await api.get(`provider/get-agreement/${applicationId}/`);
                 currentRole = 'provider';
             } catch (e) {
-                res = await api.get(`/seeker/get-agreement/${applicationId}/`);
+                res = await api.get(`seeker/get-agreement/${applicationId}/`);
             }
             
             setRole(currentRole);
@@ -127,6 +127,7 @@ const AgreementDetails = () => {
     }, []);
 
     const handleProviderAction = async (action) => {
+        if (!agreementData) return;
         try {
             if (action === 'create' || action === 'update') {
                const payload = {
@@ -141,9 +142,9 @@ const AgreementDetails = () => {
                
                let res;
                if (agreementId) {
-                   res = await api.put(`/provider/update-agreement/${agreementId}/`, payload);
+                   res = await api.put(`provider/update-agreement/${agreementId}/`, payload);
                } else {
-                   res = await api.post(`/provider/create-agreement/${applicationId}/`, payload);
+                   res = await api.post(`provider/create-agreement/${applicationId}/`, payload);
                }
                
                Alert.alert("Success", "Agreement sent to seeker.");
@@ -153,7 +154,7 @@ const AgreementDetails = () => {
                 Alert.alert("Deposit", "In this mobile version, please use the web dashboard to complete the Fiat-to-Escrow deposit. We are currently integrating native Razorpay.");
             } else if (action === 'approve') {
                 setLoading(true);
-                const res = await api.post(`/provider/approve-work/${agreementId}/`);
+                const res = await api.post(`provider/approve-work/${agreementId}/`);
                 if (res.data.status) {
                     Alert.alert("Success", "Work approved and payment released!");
                     fetchData();
@@ -169,7 +170,7 @@ const AgreementDetails = () => {
     const handleSeekerAction = async (action) => {
         try {
             if (action === 'accept' || action === 'reject') {
-                const res = await api.post(`/seeker/respond-agreement/${applicationId}/`, { action });
+                const res = await api.post(`seeker/respond-agreement/${applicationId}/`, { action });
                 Alert.alert("Success", `Agreement ${action}ed.`);
                 fetchData();
             } else if (action === 'submit_work') {
@@ -178,7 +179,7 @@ const AgreementDetails = () => {
                 formData.append('submission_notes', submissionNotes);
                 // In a real app, we'd add file upload here
                 
-                await api.post(`/seeker/submit-work/${applicationId}/`, formData, {
+                await api.post(`seeker/submit-work/${applicationId}/`, formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
                 
@@ -186,7 +187,7 @@ const AgreementDetails = () => {
                 Alert.alert("Success", "Work submitted for review.");
                 fetchData();
             } else if (action === 'complete') {
-                 const res = await api.post(`/seeker/respond-agreement/${applicationId}/`, { action: "complete" });
+                 const res = await api.post(`seeker/respond-agreement/${applicationId}/`, { action: "complete" });
                  Alert.alert("Success", "Contract completed! Funds should be in your wallet.");
                  fetchData();
             }

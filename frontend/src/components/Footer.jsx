@@ -40,7 +40,7 @@ const Footer = () => {
                         </ul>
                     </div>
                 </div>
-                <div className="border-t border-slate-800 mt-2 pt-2 text-center text-sm text-slate-500">
+                <div className="border-t border-slate-800 mt-2 pt-2 text-right text-sm text-slate-500">
                     © {new Date().getFullYear()} SkillLink. All rights reserved.
                 </div>
             </div>

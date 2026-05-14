@@ -120,23 +120,25 @@ const Dashboard = () => {
                 renderItem={({ item }) => <JobCard job={item} />}
                 ListHeaderComponent={
                     <View>
-                        {/* Dashboard Hero (Mobile Premium) */}
+                        {/* Compact Mobile Hero */}
                         <View style={styles.hero}>
-                            <View style={styles.heroOverlay} />
                             <View style={styles.heroContent}>
-                                <Text style={styles.welcomeText}>
-                                    Welcome back, {user?.full_name || "User"}! 👋
-                                </Text>
+                                <View style={styles.greetingRow}>
+                                    <View>
+                                        <Text style={styles.welcomeText}>Hello,</Text>
+                                        <Text style={styles.userName}>{user?.full_name?.split(' ')[0] || "User"} 👋</Text>
+                                    </View>
+                                    <TouchableOpacity 
+                                        style={styles.walletButton} 
+                                        onPress={() => navigation.navigate('SeekerWallet')}
+                                    >
+                                        <Feather name="credit-card" size={18} color="#fff" />
+                                        <Text style={styles.walletButtonText}>Wallet</Text>
+                                    </TouchableOpacity>
+                                </View>
                                 <Text style={styles.heroSubText}>
-                                    You have <Text style={styles.highlight}>{jobs.length} new job recommendations</Text> today.
+                                    <Text style={styles.highlight}>{jobs.length} recommendations</Text> waiting for you
                                 </Text>
-                                <TouchableOpacity 
-                                    style={styles.walletShortcut} 
-                                    onPress={() => navigation.navigate('SeekerWallet')}
-                                >
-                                    <Feather name="credit-card" size={14} color="#fff" />
-                                    <Text style={styles.walletShortcutText}>View Wallet</Text>
-                                </TouchableOpacity>
                             </View>
                         </View>
 
@@ -190,47 +192,54 @@ const styles = StyleSheet.create({
     },
     hero: {
         backgroundColor: '#1e1b4b',
-        padding: 24,
-        paddingTop: 40,
-        paddingBottom: 60,
-        borderBottomLeftRadius: 32,
-        borderBottomRightRadius: 32,
-        overflow: 'hidden',
-    },
-    heroOverlay: {
-        position: 'absolute',
-        top: -100,
-        right: -100,
-        width: 300,
-        height: 300,
-        borderRadius: 150,
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        ...Platform.select({
-            ios: { shadowColor: '#3b82f6', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 100 },
-            android: { elevation: 10 }
-        })
+        paddingHorizontal: 24,
+        paddingTop: 60,
+        paddingBottom: 40,
     },
     heroContent: {
         zIndex: 1,
     },
+    greetingRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
     welcomeText: {
-        fontSize: 28,
-        fontWeight: 'bold',
+        fontSize: 16,
+        color: '#94a3b8',
+        fontWeight: '500',
+    },
+    userName: {
+        fontSize: 24,
+        fontWeight: '800',
         color: '#fff',
-        marginBottom: 8,
     },
     heroSubText: {
-        fontSize: 15,
-        color: '#94a3b8',
-        lineHeight: 22,
+        fontSize: 14,
+        color: '#64748b',
     },
     highlight: {
-        color: '#60a5fa',
-        fontWeight: 'bold',
+        color: '#818cf8',
+        fontWeight: '700',
+    },
+    walletButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 12,
+    },
+    walletButtonText: {
+        color: '#fff',
+        fontSize: 13,
+        fontWeight: '600',
+        marginLeft: 8,
     },
     content: {
         paddingHorizontal: 20,
-        marginTop: -30,
+        marginTop: -25,
     },
     sectionHeader: {
         flexDirection: 'row',

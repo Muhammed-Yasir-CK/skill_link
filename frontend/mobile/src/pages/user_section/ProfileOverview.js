@@ -15,8 +15,9 @@ import api from '../../api/axios';
 import { useNavigation } from '@react-navigation/native';
 import Loading from '../../components/Loading';
 import EmptyState from '../../components/EmptyState';
+import Header from '../../components/Header';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const ProfileOverview = () => {
     const [profile, setProfile] = useState(null);
@@ -54,8 +55,14 @@ const ProfileOverview = () => {
     }
 
     return (
-        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-            <View style={styles.card}>
+        <View style={{ flex: 1, backgroundColor: '#f8fafc' }}>
+            <Header />
+            <ScrollView 
+                style={styles.container} 
+                contentContainerStyle={styles.scrollContent}
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.card}>
                 {/* Header Section */}
                 <View style={styles.headerRow}>
                     <View style={styles.profileMain}>
@@ -121,18 +128,23 @@ const ProfileOverview = () => {
                             ) : (
                                 <Text style={styles.emptySkills}>No skills added</Text>
                             )}
-                        </View>
                     </View>
                 </View>
             </View>
-        </ScrollView>
-    );
+        </View>
+    </ScrollView>
+</View>
+);
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#f8fafc',
+    },
+    scrollContent: {
+        flexGrow: 1,
+        justifyContent: 'center',
         padding: 16,
     },
     centerContainer: {

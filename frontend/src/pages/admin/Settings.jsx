@@ -59,7 +59,7 @@ const Settings = () => {
 
     return (
         <div className="space-y-8 max-w-4xl">
-            <Notification 
+            <Notification
                 {...notification}
                 onClose={hideNotification}
             />
@@ -118,7 +118,7 @@ const Settings = () => {
             </div>
 
             {/* Maintenance Mode */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between">
+            {/* <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <div className={`p-3 rounded-lg ${maintenanceMode ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'}`}>
                         <Power className="w-6 h-6" />
@@ -139,9 +139,9 @@ const Settings = () => {
                             }`}
                     />
                 </button>
-            </div>
+            </div> */}
 
-            {/* Announcements */}
+            {/* Announcements
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6">
                 <div className="flex items-center gap-2 mb-4 text-lg font-semibold text-brand-navy">
                     <Megaphone className="w-5 h-5 text-brand-accent" />
@@ -162,7 +162,7 @@ const Settings = () => {
                         </button>
                     </div>
                 </form>
-            </div>
+            </div> */}
         </div>
     );
 };
